@@ -18,12 +18,15 @@
 
 #include "ospcommon/array3D/Array3D.h"
 #include "ospcommon/array3D/for_each.h"
+#include "ospcommon/range.h"
 
 namespace ospray {
   namespace impi {
 
     using namespace ospcommon;
 
+    typedef ospcommon::range_t<float> Range;
+    
     struct VoxelRef {
       VoxelRef() {};
       VoxelRef(const vec3i &idx) : x(idx.x), y(idx.y), z(idx.z) {}
@@ -41,6 +44,14 @@ namespace ospray {
     /*! a cell with 8 corner voxels */
     struct Cell {
       float vtx[2][2][2];
+
+      inline Range getRange() const {
+        Range range;
+        array3D::for_each(vec3i(2),[&](const vec3i idx) {
+            range.extend(vtx[idx.z][idx.y][idx.x]);
+          });
+        return range;
+      }
     };
     
     /*! defines basic logcial abstraction for a volume class we can
@@ -48,30 +59,42 @@ namespace ospray {
         get merged into some more ospray/common like volume thingy */
     struct LogicalVolume {
       /*! return dimensions (in voxels, not cells!) of the underlying volume */
-      virtual vec3i getDims() const override = 0;
+      virtual vec3i getDims() const = 0;
       
       /* query get the eight corner voxels (in float) of given cell */
-      virtual void getCell(Cell &cell, const vec3i &cellIdx);
+      virtual void getCell(Cell &cell, const vec3i &cellIdx) const = 0;
       
       /*! create a list of all the cell references in [lower,upper)
           whose value range overlaps the given iso-value */ 
       virtual void filterVoxelsThatOverLapIsoValue(std::vector<VoxelRef> &out,
                                                    const vec3i &lower,
                                                    const vec3i &upper,
-                                                   const float iso) const override = 0;
+                                                   const float iso) const = 0;
     };
 
     /*! defines an _actual_ implementation of a volume */
     template<typename T>
-    struct VolumeT : public AbstractVolume, public array3D::ActualArray3D<T> {
+    struct VolumeT : public LogicalVolume, array3D::ActualArray3D<T> {
+
+      /*! constructor */
+      VolumeT(const vec3i &dims) : array3D::ActualArray3D<T>(dims) {}
+      
       /*! return dimensions (in voxels, not cells!) of the underlying volume */
-      virtual vec3i getDims() const override ;
+      virtual vec3i getDims() const override { return this->size(); }
+
+      
+      inline Range getRangeOfCell(const vec3i &cellIdx) const
+      {
+        Cell c;
+        getCell(c,cellIdx);
+        return c.getRange();
+      }
       
       /* query get the eight corner voxels (in float) of given cell */
-      virtual void getCell(Cell &cell, const vec3i &cellIdx);
+      virtual void getCell(Cell &cell, const vec3i &cellIdx) const override
       {
         array3D::for_each(vec3i(2),[&](const vec3i vtxIdx){
-            cell.v[vtxIdx.z][vtxIdx.y][vtxIdx.x] = this->get(idx+vtxIdx);
+            cell.vtx[vtxIdx.z][vtxIdx.y][vtxIdx.x] = this->get(cellIdx+vtxIdx);
           });
       }
       
@@ -83,11 +106,11 @@ namespace ospray {
                                                    const float iso) const override
       {
         array3D::for_each(lower,upper,[&](const vec3i &idx) {
-            if (this->getRange(idx).contains(iso))
+            if (this->getRangeOfCell(idx).contains(iso))
               out.push_back(VoxelRef(idx));
           });
       }
     };
 
-  }
-}
+  } // ::ospray::impi
+} // ::ospray

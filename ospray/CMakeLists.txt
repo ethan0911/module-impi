@@ -51,6 +51,10 @@ OSPRAY_CREATE_LIBRARY(ospray_module_impi
 
   # and finally, the module init code (not doing much, but must be there)
   moduleInit.cpp
+
+
+  common/Volume.cpp
+
   
   # this depends on ospray core:
   LINK
