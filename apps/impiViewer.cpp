@@ -99,6 +99,13 @@ namespace ospray {
 
       // auto &patchesInstance = world.createChild("patches", "Instance");
 
+#if 1
+      const std::string fileName = "test.vol";
+      auto importerNode_ptr = sg::createNode(ss.str(), "Importer")->nodeAs<sg::Importer>();;
+      auto &importerNode = *importerNode_ptr;
+      importerNode["fileName"] = fileName.str();
+      
+#else
       auto patchesGeometryNode = std::make_shared<ImpiSGNode>();
       patchesGeometryNode->setName("loaded_example_patches");
       patchesGeometryNode->setType("impi");
