@@ -99,25 +99,28 @@ namespace ospray {
 
       // auto &patchesInstance = world.createChild("patches", "Instance");
 
-#if 1
+#if 0
+      ????
       const std::string fileName = "test.vol";
       auto importerNode_ptr = sg::createNode(ss.str(), "Importer")->nodeAs<sg::Importer>();;
       auto &importerNode = *importerNode_ptr;
       importerNode["fileName"] = fileName.str();
       
 #else
-      auto patchesGeometryNode = std::make_shared<ImpiSGNode>();
-      patchesGeometryNode->setName("loaded_example_patches");
-      patchesGeometryNode->setType("impi");
+      auto impiGeometryNode = std::make_shared<ImpiSGNode>();
+      impiGeometryNode->setName("impi_geometry");
+      impiGeometryNode->setType("impi");
 
       float values[8] = { 0,0,0,0,0,0,0,1 };
       auto voxelArrayNode =
-        std::make_shared<sg::DataArray1f>((float*)values,12,false);
+        std::make_shared<sg::DataArray1f>((float*)values,8,false);
       voxelArrayNode->setName("voxel");
       voxelArrayNode->setType("DataArray1f");
-      patchesGeometryNode->add(voxelArrayNode);
+      impiGeometryNode->add(voxelArrayNode);
+#endif
+      
       // patchesInstance["model"].
-        world.add(patchesGeometryNode);
+      world.add(impiGeometryNode);
 
       ospray::ImGuiViewer window(renderer_ptr);
 

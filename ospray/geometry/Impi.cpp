@@ -20,6 +20,8 @@
 // ospray core:
 #include <ospray/common/Data.h>
 
+#include "../common/Volume.h"
+
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
 namespace ospray {
@@ -34,7 +36,6 @@ namespace ospray {
     /*! constructor - will create the 'ispc equivalent' */
     Impi::Impi()
     {
-      PING;
       /*! create the 'ispc equivalent': ie, the ispc-side class that
         implements all the ispc-side code for intersection,
         postintersect, etc. See Impi.ispc */
@@ -57,7 +58,6 @@ namespace ospray {
       control points */
     void Impi::commit()
     {
-      PING;
       this->voxelData = getParamData("voxel");
 
       /* assert that some valid input data is available */
