@@ -143,7 +143,7 @@ inline bool unitVoxelIntersect(Ray &ray,
   
   const Hermite hermite = sub(computeHermite(voxel,getPoint(ray,t0),getPoint(ray,t1)),isoValue);
   
-#if 1
+#if 0
   const Poly3 poly = toPoly(hermite);
   return findRoot(ray.t,poly,t0,t1);
 #else
@@ -166,11 +166,19 @@ inline bool actualVoxelIntersect(Ray &ray,
   const vec3f save_dir = ray.dir;
 
   const uniform vec3f cellPos = make_vec3f(make_vec3f(cellIdx)*rcpDims);
-  ray.org = ray.org - cellPos;
-  ray.dir = ray.dir * rcpDims;
 
+  ray.org = ray.org * rcp(rcpDims) - make_vec3f(cellIdx);
+  ray.dir = ray.dir * rcpDims;
+  
+  // ray.org = (ray.org - cellPos)*rcpDims;
+  // ray.dir = ray.dir * rcpDims;
+  
   bool hit = unitVoxelIntersect(ray,voxel,isoValue);
 
+  if (hit) {
+    ray.Ng = gradient(voxel,getPoint(ray,ray.t));
+  }
+  
   ray.dir = save_dir;
   ray.org = save_org;
   return hit;

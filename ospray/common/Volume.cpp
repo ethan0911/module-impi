@@ -48,12 +48,17 @@ namespace ospray {
       std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
 
       array3D::for_each(dims,[&](const vec3i &idx){
+          const vec3f pos = (vec3f(idx)// +vec3f(.5f)
+                             ) * rcp(vec3f(dims)-vec3f(1.f));
+# if 0
+          float val = pos.x+pos.y+pos.z;
+# else
           float val = 0.f;
-          vec3f pos = (vec3f(idx)+vec3f(.5f)) * rcp(vec3f(dims));
           val += genBlob(pos,vec3f(.2,.1,.7),.4);
           val += genBlob(pos,vec3f(.3,.3,.2),.3);
           val += genBlob(pos,vec3f(.8,.4,.9),.2);
           val += genBlob(pos,vec3f(.5,.5,.5),.5);
+# endif
           vol->set(idx,val);
         });
       return vol;

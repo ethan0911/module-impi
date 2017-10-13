@@ -168,8 +168,6 @@ void Impi_intersect_hotCells(Impi *uniform self,
   if (actualVoxelIntersect(ray,voxel,cellIdx,self->rcpDims,self->isoValue)) {
     ray.geomID = self->super.geomID;
     ray.primID = primID;
-    const vec3f P = getPoint(ray,ray.t);
-    ray.Ng = normalize(gradient(voxel,P));
   }
   return;
   // uniform Voxel *uniform v = (uniform Voxel *uniform)self->voxelArray;
