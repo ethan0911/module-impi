@@ -37,6 +37,16 @@ struct Impi {
 
   float isoValue;
   float *voxelArray;
+  vec3f rcpDims; // rcp(dims)
+
+  /*! for the case where we build an embree bvh over the hot cells,
+      this is the list of all cells that are hot (each one is one prim
+      in the embree BVH */
+  uint64 *uniform hotCellRefs;
+
+  /*! for the embree bvh over hot cells case this is the c-handle to
+      the c-side volume */
+  void *uniform volume;
 };
 
 static void Impi_postIntersect(uniform Geometry *uniform geometry,
@@ -90,9 +100,9 @@ export void Impi_destroy(void *uniform _self)
     to be able to tell it the bounding box for each primitimve. this
     is the callback embree calls for querying the (uniform) bounding
     box for a single given primitmive 'primID' */
-unmasked void Impi_bounds(Impi *uniform self,
-                          uniform size_t primID,
-                          uniform box3fa &bbox)
+unmasked void Impi_bounds_testCell(Impi *uniform self,
+                                   uniform size_t primID,
+                                   uniform box3fa &bbox)
 {
   bbox.lower = make_vec3fa(0.f);
   bbox.upper = make_vec3fa(1.f);
@@ -101,15 +111,33 @@ unmasked void Impi_bounds(Impi *uniform self,
 
 
 
+#define CELL_REF_BITS 21
+#define CELL_REF_MASK ((1<<CELL_REF_BITS)-1)
 
-/*! this is the function callback the embree calls to compute a single
-  ray-primitive intersection. For sake of simplicity we'll use a very,
-  very simple recursive test here - this is neither fast nor elegant,
-  but does show that you can do mere arbitray stuff in a ISPC kernel,
-  including 'true' recusion. */
-void Impi_intersect(Impi *uniform self,
-                    varying Ray &ray,
-                    uniform size_t primID)
+inline uniform vec3i extractCellRef(const uniform uint64 cellRef)
+{
+  return make_vec3i((int)(cellRef & CELL_REF_MASK),
+                    (int)((cellRef >> CELL_REF_BITS) & CELL_REF_MASK),
+                    (int)((cellRef >> (2*CELL_REF_BITS)) & CELL_REF_MASK));
+}
+
+unmasked void Impi_bounds_hotCells(Impi *uniform self,
+                                   uniform size_t primID,
+                                   uniform box3fa &bbox)
+{
+  uniform vec3i cellIdx = extractCellRef(self->hotCellRefs[primID]);
+  bbox.lower = make_vec3fa(make_vec3f(cellIdx)*self->rcpDims);
+  bbox.upper = bbox.lower + make_vec3fa(self->rcpDims);
+}
+
+
+
+
+
+/*! intersect callback for the simple test-cell example */
+void Impi_intersect_testCell(Impi *uniform self,
+                             varying Ray &ray,
+                             uniform size_t primID)
 {
   uniform Voxel *uniform v = (uniform Voxel *uniform)self->voxelArray;
   if (unitVoxelIntersect(ray,*v,self->isoValue)) {
@@ -124,16 +152,49 @@ void Impi_intersect(Impi *uniform self,
 }
 
 
+unmasked extern "C" externC_getCell(uniform Voxel &cell,
+                                     void *uniform volume,
+                                     const uniform vec3i &cellIdx);
+
+
+/*! intersect callback for the 'embree over hot cells' method */
+void Impi_intersect_hotCells(Impi *uniform self,
+                             varying Ray &ray,
+                             uniform size_t primID)
+{
+  uniform Voxel voxel;
+  const uniform vec3i cellIdx = extractCellRef(self->hotCellRefs[primID]);
+  externC_getCell(voxel,self->volume,cellIdx);
+  if (actualVoxelIntersect(ray,voxel,cellIdx,self->rcpDims,self->isoValue)) {
+    ray.geomID = self->super.geomID;
+    ray.primID = primID;
+    const vec3f P = getPoint(ray,ray.t);
+    ray.Ng = normalize(gradient(voxel,P));
+  }
+  return;
+  // uniform Voxel *uniform v = (uniform Voxel *uniform)self->voxelArray;
+  // if (unitVoxelIntersect(ray,*v,self->isoValue)) {
+  //   ray.geomID = self->super.geomID;
+  //   ray.primID = primID;
+  //   const vec3f P = getPoint(ray,ray.t);
+  //   // print("hit\n %\n %\n %\n",P.x,P.y,P.z);
+  //   ray.Ng = normalize(gradient(*v,P));
+  //   // print("grad\n %\n %\n %\n",ray.Ng.x,ray.Ng.y,ray.Ng.z);
+  //   // ray.Ng = make_vec3f(1,0,0);
+  // }
+}
+
+
 
 /*! the function called by Impi::commit() to pass the
   actual user data over. for simplicity we assume that this functoin
   gets called exactly once; in practice a user may also _change_ an
   existing class'es data members, but handling this would make this
   code significantly larger */
-export void Impi_finalize(void *uniform _self,
-                          void *uniform _model,
-                          float *uniform voxelArray,
-                          uniform float isoValue)
+export void Impi_finalize_testCell(void *uniform _self,
+                                   void *uniform _model,
+                                   float *uniform voxelArray,
+                                   uniform float isoValue)
 {
   // first, typecast to our 'real' type. since ispc can't export real
   // types to c we have to pass 'self' in as a void*, and typecast
@@ -159,13 +220,53 @@ export void Impi_finalize(void *uniform _self,
   
   // set function pointers:
   rtcSetBoundsFunction(model->embreeSceneHandle,geomID,
-                       (uniform RTCBoundsFunc)&Impi_bounds);
+                       (uniform RTCBoundsFunc)&Impi_bounds_testCell);
   rtcSetIntersectFunction(model->embreeSceneHandle,geomID,
-                          (uniform RTCIntersectFuncVarying)&Impi_intersect);
+                          (uniform RTCIntersectFuncVarying)&Impi_intersect_testCell);
   rtcSetOccludedFunction(model->embreeSceneHandle,geomID,
-                         (uniform RTCOccludedFuncVarying)&Impi_intersect);
+                         (uniform RTCOccludedFuncVarying)&Impi_intersect_testCell);
 }
                                     
 
-    
- 
+export void Impi_finalize_embreeBVHoverHotCells(void *uniform _self,
+                                                void *uniform _model,
+                                                uint64 *uniform hotCellRefs,
+                                                uint64 uniform numHotCellRefs,
+                                                uniform vec3i &dims,
+                                                void *uniform _volume,
+                                                uniform float isoValue)
+{
+  // first, typecast to our 'real' type. since ispc can't export real
+  // types to c we have to pass 'self' in as a void*, and typecast
+  // here.
+  Impi *uniform self = (Impi *uniform)_self;
+  
+  // set our internal data.
+  self->isoValue   = isoValue;
+  self->rcpDims  = rcp(make_vec3f(dims)-make_vec3f(1.f));
+  self->hotCellRefs = hotCellRefs;
+  self->volume      = _volume;
+  
+  // ... and let embree build a bvh, with 'numPatches' primitmives and
+  // our function pointers for ray-prim interseciton and
+  // prim-boundingbox computation callsbacks
+  Model *uniform model  = (Model *uniform)_model;
+  
+  // create a new embree geometry with numpathces prims, in the model
+  // that this goemetry is in.
+  uint32 uniform geomID = rtcNewUserGeometry(model->embreeSceneHandle,numHotCellRefs);
+  
+  // set 'us' as user data (this will be the first arg in intersect()
+  // and computebounds() callbacks
+  rtcSetUserData(model->embreeSceneHandle,geomID,self);
+  
+  // set function pointers:
+  rtcSetBoundsFunction(model->embreeSceneHandle,geomID,
+                       (uniform RTCBoundsFunc)&Impi_bounds_hotCells);
+  rtcSetIntersectFunction(model->embreeSceneHandle,geomID,
+                          (uniform RTCIntersectFuncVarying)&Impi_intersect_hotCells);
+  rtcSetOccludedFunction(model->embreeSceneHandle,geomID,
+                         (uniform RTCOccludedFuncVarying)&Impi_intersect_hotCells);
+}
+                                    
+

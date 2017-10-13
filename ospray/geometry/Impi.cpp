@@ -69,6 +69,14 @@ namespace ospray {
       }
     }
 
+
+    extern "C" void externC_getCell(Cell &cell,
+                                    const LogicalVolume *volume,
+                                    const vec3i &cellIdx)
+    {
+      volume->getCell(cell,cellIdx);
+    }
+
     /*! 'finalize' is what ospray calls when everything is set and
         done, and a actual user geometry has to be built */
     void Impi::finalize(Model *model)
@@ -81,18 +89,24 @@ namespace ospray {
 
 #if 1
       std::cout << "loading test data-set, and testing generation of iso-voxels" << std::endl;
-      std::shared_ptr<LogicalVolume> testVolume = loadTestDataSet();
-      std::vector<CellRef> hotCells;
-      testVolume->filterAllVoxelsThatOverLapIsoValue(hotCells,isoValue);
-      PRINT(hotCells.size());
-#endif
-      
+      volume = loadTestDataSet();
+
+      volume->filterAllVoxelsThatOverLapIsoValue(hotCells,isoValue);
+      std::cout << "asking ISPC to build a bvh over the hot cells..." << std::endl;
+      vec3i dims = volume->getDims();
+      ispc::Impi_finalize_embreeBVHoverHotCells(getIE(),model->getIE(),
+                                                (uint64_t*)&hotCells[0],hotCells.size(),
+                                                (ispc::vec3i &)dims,
+                                                volume.get(),
+                                                isoValue);
+#else
       /* get the acual 'raw' pointer to the data (ispc doesn't konw
          what to do with the 'Data' abstraction calss */
       void *voxelDataPointer = voxelData->data;
-      ispc::Impi_finalize(getIE(),model->getIE(),
-                          (float*)voxelDataPointer,
-                          isoValue);
+      ispc::Impi_finalize_testCell(getIE(),model->getIE(),
+                                   (float*)voxelDataPointer,
+                                   isoValue);
+#endif
     }
 
 

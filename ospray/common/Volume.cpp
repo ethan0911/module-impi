@@ -27,7 +27,7 @@ namespace ospray {
     {
       /*! for now, do this single-threaded: \todo use tasksys ... */
       out.clear();
-      filterVoxelsThatOverLapIsoValue(out,vec3i(0),getDims(),iso);
+      filterVoxelsThatOverLapIsoValue(out,vec3i(0),getDims()-vec3i(1),iso);
     }
 
 
@@ -44,7 +44,7 @@ namespace ospray {
     std::shared_ptr<LogicalVolume> loadTestDataSet()
     {
 #if 1
-      const vec3i dims(512);
+      const vec3i dims(64);
       std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
 
       array3D::for_each(dims,[&](const vec3i &idx){

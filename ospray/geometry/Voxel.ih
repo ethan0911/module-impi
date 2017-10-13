@@ -96,6 +96,19 @@ inline void intersectUnitBox(const Ray& ray,
   t1 = reduce_min(make_vec4f(max(mins, maxs), ray.t));
 }
 
+/*! helper function that performs a ray-box test */
+inline void intersectBox(const Ray& ray,
+                         const uniform vec3f &lower,
+                         const uniform vec3f &upper,
+                         float& t0,
+                         float& t1)
+{
+  const vec3f mins = (lower - ray.org) * rcp(ray.dir);
+  const vec3f maxs = (upper - ray.org) * rcp(ray.dir);
+  t0 = reduce_max(make_vec4f(min(mins, maxs), ray.t0));
+  t1 = reduce_min(make_vec4f(max(mins, maxs), ray.t));
+}
+
 inline vec3f getPoint(const Ray &ray, const float t)
 {
   return ray.org + t * ray.dir;
@@ -124,9 +137,13 @@ inline bool unitVoxelIntersect(Ray &ray,
 
   if (t0 > t1) return false;
 
+
+  // ray.t = t0;
+  // return true;
+  
   const Hermite hermite = sub(computeHermite(voxel,getPoint(ray,t0),getPoint(ray,t1)),isoValue);
   
-#if 0
+#if 1
   const Poly3 poly = toPoly(hermite);
   return findRoot(ray.t,poly,t0,t1);
 #else
@@ -136,3 +153,25 @@ inline bool unitVoxelIntersect(Ray &ray,
 #endif
 }
 
+
+
+
+inline bool actualVoxelIntersect(Ray &ray,
+                                 const uniform Voxel &voxel,
+                                 const uniform vec3i &cellIdx,
+                                 const uniform vec3f &rcpDims,
+                                 const uniform float isoValue)
+{
+  const vec3f save_org = ray.org;
+  const vec3f save_dir = ray.dir;
+
+  const uniform vec3f cellPos = make_vec3f(make_vec3f(cellIdx)*rcpDims);
+  ray.org = ray.org - cellPos;
+  ray.dir = ray.dir * rcpDims;
+
+  bool hit = unitVoxelIntersect(ray,voxel,isoValue);
+
+  ray.dir = save_dir;
+  ray.org = save_org;
+  return hit;
+}

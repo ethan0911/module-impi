@@ -28,6 +28,9 @@
 #include <ospray/geometry/Geometry.h>
 #include <ospray/common/Model.h>
 
+// OUR includes
+#include "../common/Volume.h"
+
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
 namespace ospray {
@@ -57,16 +60,6 @@ namespace ospray {
     */
     struct Impi : public ospray::Geometry
     {
-      /*! data layout of a single patch. note we do not actually use
-          this class anywhere on the c++ side of this example, it is
-          only for illustrative purposes. The input data should come
-          as a data array of N such patches (we compute N
-          automatically based on the size of this array) */
-      struct Patch
-      {
-        vec3f controlPoint[2][2];
-      };
-
       /*! constructor - will create the 'ispc equivalent' */
       Impi();
 
@@ -87,6 +80,12 @@ namespace ospray {
           as a plain array of floats (with 12 floats per patch), or as
           a array of vec3fs. */
       Ref<Data> voxelData;
+
+      /*! for the case where we build an embree bvh over all hot
+          cells, this is the vector that stores them.. */
+      std::vector<CellRef> hotCells;
+      
+      std::shared_ptr<LogicalVolume> volume;
     };
 
   } // ::ospray::bilinearPatch

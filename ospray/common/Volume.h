@@ -29,7 +29,9 @@ namespace ospray {
     
     struct CellRef {
       CellRef() {};
-      CellRef(const vec3i &idx) : x(idx.x), y(idx.y), z(idx.z) {}
+      CellRef(const vec3i &idx)
+        : x(idx.x), y(idx.y), z(idx.z)
+      {}
       
       union {
         uint64_t id;
