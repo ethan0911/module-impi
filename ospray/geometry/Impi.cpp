@@ -76,8 +76,16 @@ namespace ospray {
       // sanity check if a patches data was actually set!
       if (!voxelData)
         return;
-
+      
       float isoValue = 0.4f;
+
+#if 1
+      std::cout << "loading test data-set, and testing generation of iso-voxels" << std::endl;
+      std::shared_ptr<LogicalVolume> testVolume = loadTestDataSet();
+      std::vector<CellRef> hotCells;
+      testVolume->filterAllVoxelsThatOverLapIsoValue(hotCells,isoValue);
+      PRINT(hotCells.size());
+#endif
       
       /* get the acual 'raw' pointer to the data (ispc doesn't konw
          what to do with the 'Data' abstraction calss */

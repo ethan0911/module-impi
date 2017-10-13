@@ -27,9 +27,9 @@ namespace ospray {
 
     typedef ospcommon::range_t<float> Range;
     
-    struct VoxelRef {
-      VoxelRef() {};
-      VoxelRef(const vec3i &idx) : x(idx.x), y(idx.y), z(idx.z) {}
+    struct CellRef {
+      CellRef() {};
+      CellRef(const vec3i &idx) : x(idx.x), y(idx.y), z(idx.z) {}
       
       union {
         uint64_t id;
@@ -66,11 +66,19 @@ namespace ospray {
       
       /*! create a list of all the cell references in [lower,upper)
           whose value range overlaps the given iso-value */ 
-      virtual void filterVoxelsThatOverLapIsoValue(std::vector<VoxelRef> &out,
+      virtual void filterVoxelsThatOverLapIsoValue(std::vector<CellRef> &out,
                                                    const vec3i &lower,
                                                    const vec3i &upper,
                                                    const float iso) const = 0;
+
+      /*! create a list of *all* the cell references in the entire volume
+        whose value range overlaps the given iso-value */ 
+      void filterAllVoxelsThatOverLapIsoValue(std::vector<CellRef> &out,
+                                              const float iso) const;
     };
+
+    /*! load a test data set */
+    std::shared_ptr<LogicalVolume> loadTestDataSet();
 
     /*! defines an _actual_ implementation of a volume */
     template<typename T>
@@ -100,14 +108,14 @@ namespace ospray {
       
       /*! create a list of all the cell references in [lower,upper)
           whose value range overlaps the given iso-value */ 
-      virtual void filterVoxelsThatOverLapIsoValue(std::vector<VoxelRef> &out,
+      virtual void filterVoxelsThatOverLapIsoValue(std::vector<CellRef> &out,
                                                    const vec3i &lower,
                                                    const vec3i &upper,
                                                    const float iso) const override
       {
         array3D::for_each(lower,upper,[&](const vec3i &idx) {
             if (this->getRangeOfCell(idx).contains(iso))
-              out.push_back(VoxelRef(idx));
+              out.push_back(CellRef(idx));
           });
       }
     };

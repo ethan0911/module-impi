@@ -18,9 +18,46 @@
 
 namespace ospray {
   namespace impi {
-    
-    inline std::shared_ptr<LogicalVolume> loadTestDataSet()
+
+    /*! create a list of *all* the cell references in the entire volume
+      whose value range overlaps the given iso-value 
+    */ 
+    void LogicalVolume::filterAllVoxelsThatOverLapIsoValue(std::vector<CellRef> &out,
+                                              const float iso) const
     {
+      /*! for now, do this single-threaded: \todo use tasksys ... */
+      out.clear();
+      filterVoxelsThatOverLapIsoValue(out,vec3i(0),getDims(),iso);
+    }
+
+
+    /* geneate a simple linear basis function centerred around cente,r
+       with max radius r, and center wieght 1, and evalute it for
+       'pos' */
+    inline float genBlob(const vec3f &pos, const vec3f &center, const float r)
+    {
+      float dist = length(pos-center);
+      if (dist > r) return 0.f;
+      return 1.f - (dist/r);
+    }
+    
+    std::shared_ptr<LogicalVolume> loadTestDataSet()
+    {
+#if 1
+      const vec3i dims(512);
+      std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
+
+      array3D::for_each(dims,[&](const vec3i &idx){
+          float val = 0.f;
+          vec3f pos = (vec3f(idx)+vec3f(.5f)) * rcp(vec3f(dims));
+          val += genBlob(pos,vec3f(.2,.1,.7),.4);
+          val += genBlob(pos,vec3f(.3,.3,.2),.3);
+          val += genBlob(pos,vec3f(.8,.4,.9),.2);
+          val += genBlob(pos,vec3f(.5,.5,.5),.5);
+          vol->set(idx,val);
+        });
+      return vol;
+#else
       const std::string fileName = "~/models/magnetic-512-volume/magnetic-512-volume.raw";
       const vec3i dims(512);
       
@@ -31,6 +68,7 @@ namespace ospray {
       size_t numRead = fread(vol->value,dims.product(),sizeof(float),file);
       assert(numRead == dims.product());
       return vol;
+#endif
     }
 
   } // ::ospray::impi
