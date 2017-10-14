@@ -143,7 +143,7 @@ inline bool unitVoxelIntersect(Ray &ray,
   
   const Hermite hermite = sub(computeHermite(voxel,getPoint(ray,t0),getPoint(ray,t1)),isoValue);
   
-#if 0
+#if 1
   const Poly3 poly = toPoly(hermite);
   return findRoot(ray.t,poly,t0,t1);
 #else
@@ -159,27 +159,25 @@ inline bool unitVoxelIntersect(Ray &ray,
 inline bool actualVoxelIntersect(Ray &ray,
                                  const uniform Voxel &voxel,
                                  const uniform vec3i &cellIdx,
+                                 const uniform vec3f &scaleDims,
                                  const uniform vec3f &rcpDims,
                                  const uniform float isoValue)
 {
-  const vec3f save_org = ray.org;
-  const vec3f save_dir = ray.dir;
+  const uniform vec3f cell_lo = make_vec3f(cellIdx)*rcpDims;
+  const uniform vec3f cell_hi = cell_lo + rcpDims;
 
-  const uniform vec3f cellPos = make_vec3f(make_vec3f(cellIdx)*rcpDims);
+  float t0, t1;
+  intersectBox(ray,cell_lo,cell_hi,t0,t1);
+  if (t0 >= t1) return false;
 
-  ray.org = ray.org * rcp(rcpDims) - make_vec3f(cellIdx);
-  ray.dir = ray.dir * rcpDims;
-  
-  // ray.org = (ray.org - cellPos)*rcpDims;
-  // ray.dir = ray.dir * rcpDims;
-  
-  bool hit = unitVoxelIntersect(ray,voxel,isoValue);
+  const vec3f P0 = (getPoint(ray,t0)-cell_lo)*scaleDims; // * rcp(rcpDims);
+  const vec3f P1 = (getPoint(ray,t1)-cell_lo)*scaleDims; // * rcp(rcpDims);
 
-  if (hit) {
-    ray.Ng = gradient(voxel,getPoint(ray,ray.t));
+  const Hermite hermite = sub(computeHermite(voxel,P0,P1),isoValue);
+  const Poly3 poly = toPoly(hermite);
+  if (findRoot(ray.t,poly,t0,t1)) {
+    ray.Ng = gradient(voxel,(getPoint(ray,ray.t) - cell_lo)*scaleDims); //*rcp(rcpDims));
+    return true;
   }
-  
-  ray.dir = save_dir;
-  ray.org = save_org;
-  return hit;
+  return false;
 }

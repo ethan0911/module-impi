@@ -93,7 +93,9 @@ namespace ospray {
       auto &win_size = ospray::imgui3D::ImGui3DWidget::defaultInitSize;
       renderer["frameBuffer"]["size"] = win_size;
 
-      renderer["rendererType"] = std::string("raycast_Ns");
+      
+      // renderer["rendererType"] = std::string("raycast_Ns");
+      renderer["rendererType"] = std::string("scivis");
 
       auto &world = renderer["world"];
 
@@ -111,13 +113,37 @@ namespace ospray {
       impiGeometryNode->setName("impi_geometry");
       impiGeometryNode->setType("impi");
 
-      float values[8] = { 0,0,0,0,0,0,0,1 };
-      auto voxelArrayNode =
-        std::make_shared<sg::DataArray1f>((float*)values,8,false);
-      voxelArrayNode->setName("voxel");
-      voxelArrayNode->setType("DataArray1f");
-      impiGeometryNode->add(voxelArrayNode);
+      // float values[8] = { 0,0,0,0,0,0,0,1 };
+      // auto voxelArrayNode =
+      //   std::make_shared<sg::DataArray1f>((float*)values,8,false);
+      // voxelArrayNode->setName("voxel");
+      // voxelArrayNode->setType("DataArray1f");
+      // impiGeometryNode->add(voxelArrayNode);
+      // impiGeometryNode->dims = 
 #endif
+
+      auto &impiMaterial = (*impiGeometryNode)["material"];
+      impiMaterial["Kd"] = vec3f(0.5f);
+      impiMaterial["Ks"] = vec3f(0.1f);
+      impiMaterial["Ns"] = 10.f;
+
+      auto &lights = renderer["lights"];
+      {
+        auto &sun = lights.createChild("sun", "DirectionalLight");
+        sun["color"] = vec3f(1.f,232.f/255.f,166.f/255.f);
+        sun["direction"] = vec3f(0.462f,-1.f,-.1f);
+        sun["intensity"] = 1.5f;
+
+        auto &bounce = lights.createChild("bounce", "DirectionalLight");
+        bounce["color"] = vec3f(127.f/255.f,178.f/255.f,255.f/255.f);
+        bounce["direction"] = vec3f(-.93,-.54f,-.605f);
+        bounce["intensity"] = 0.25f;
+        
+        auto &ambient = lights.createChild("ambient", "AmbientLight");
+        ambient["intensity"] = 0.9f;
+        ambient["color"] = vec3f(174.f/255.f,218.f/255.f,255.f/255.f);
+      }
+      
       
       // patchesInstance["model"].
       world.add(impiGeometryNode);

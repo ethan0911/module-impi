@@ -74,13 +74,6 @@ namespace ospray {
         done, and a actual user geometry has to be built */
       virtual void finalize(Model *model) override;
 
-      /*! the input data array. the data array contains a list of
-          patches, each of which consists of four vec3fs. Note in this
-          example we do not particularly care about whether this comes
-          as a plain array of floats (with 12 floats per patch), or as
-          a array of vec3fs. */
-      Ref<Data> voxelData;
-
       /*! for the case where we build an embree bvh over all hot
           cells, this is the vector that stores them.. */
       std::vector<CellRef> hotCells;

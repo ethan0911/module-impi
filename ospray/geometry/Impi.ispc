@@ -37,6 +37,7 @@ struct Impi {
 
   float isoValue;
   float *voxelArray;
+  vec3f scaleDims;
   vec3f rcpDims; // rcp(dims)
 
   /*! for the case where we build an embree bvh over the hot cells,
@@ -165,7 +166,7 @@ void Impi_intersect_hotCells(Impi *uniform self,
   uniform Voxel voxel;
   const uniform vec3i cellIdx = extractCellRef(self->hotCellRefs[primID]);
   externC_getCell(voxel,self->volume,cellIdx);
-  if (actualVoxelIntersect(ray,voxel,cellIdx,self->rcpDims,self->isoValue)) {
+  if (actualVoxelIntersect(ray,voxel,cellIdx,self->scaleDims,self->rcpDims,self->isoValue)) {
     ray.geomID = self->super.geomID;
     ray.primID = primID;
   }
@@ -241,7 +242,8 @@ export void Impi_finalize_embreeBVHoverHotCells(void *uniform _self,
   
   // set our internal data.
   self->isoValue   = isoValue;
-  self->rcpDims  = rcp(make_vec3f(dims)-make_vec3f(1.f));
+  self->scaleDims = make_vec3f(dims)-make_vec3f(1.f);
+  self->rcpDims  = rcp(self->scaleDims);
   self->hotCellRefs = hotCellRefs;
   self->volume      = _volume;
   

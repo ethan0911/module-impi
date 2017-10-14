@@ -58,15 +58,9 @@ namespace ospray {
       control points */
     void Impi::commit()
     {
-      this->voxelData = getParamData("voxel");
+      // this->voxelData = getParamData("voxel");
 
       /* assert that some valid input data is available */
-      if (!this->voxelData) {
-
-        std::cout << "#osp.blp: Warning: no input patches provided "
-                  << "for bilinear_patches geometry" << std::endl;
-        return;
-      }
     }
 
 
@@ -82,9 +76,6 @@ namespace ospray {
     void Impi::finalize(Model *model)
     {
       // sanity check if a patches data was actually set!
-      if (!voxelData)
-        return;
-      
       float isoValue = 0.4f;
 
 #if 1

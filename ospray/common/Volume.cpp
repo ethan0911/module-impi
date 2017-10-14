@@ -44,26 +44,25 @@ namespace ospray {
     std::shared_ptr<LogicalVolume> loadTestDataSet()
     {
 #if 1
+      /* generate a simple test volume that consists of a few blobs in space */
       const vec3i dims(64);
       std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
 
       array3D::for_each(dims,[&](const vec3i &idx){
           const vec3f pos = (vec3f(idx)// +vec3f(.5f)
                              ) * rcp(vec3f(dims)-vec3f(1.f));
-# if 0
-          float val = pos.x+pos.y+pos.z;
-# else
           float val = 0.f;
-          val += genBlob(pos,vec3f(.2,.1,.7),.4);
-          val += genBlob(pos,vec3f(.3,.3,.2),.3);
-          val += genBlob(pos,vec3f(.8,.4,.9),.2);
-          val += genBlob(pos,vec3f(.5,.5,.5),.5);
-# endif
+          val += genBlob(pos,vec3f(.2,.1,.7),.3);
+          val += genBlob(pos,vec3f(.3,.3,.2),.2);
+          val += genBlob(pos,vec3f(.8,.4,.9),.1);
+          val += genBlob(pos,vec3f(.5,.5,.5),.4);
           vol->set(idx,val);
         });
       return vol;
 #else
-      const std::string fileName = "~/models/magnetic-512-volume/magnetic-512-volume.raw";
+      /* load a (hardcoded) file ... will eventually need to get
+         filename passed for loading */
+      const std::string fileName = "/home/wald/models/magnetic-512-volume/magnetic-512-volume.raw";
       const vec3i dims(512);
       
       FILE *file = fopen(fileName.c_str(),"rb");
