@@ -76,13 +76,21 @@ namespace ospray {
     void Impi::finalize(Model *model)
     {
       // sanity check if a patches data was actually set!
-      float isoValue = 0.4f;
+      float isoValue = 20.f;//0.4f;
 
 #if 1
       std::cout << "loading test data-set, and testing generation of iso-voxels" << std::endl;
-      volume = loadTestDataSet();
+      volume = VolumeT<float>::loadRAW("density_064_064_2.0.raw",vec3i(64));
+      seg    = VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
 
-      volume->filterAllVoxelsThatOverLapIsoValue(hotCells,isoValue);
+      volume->filterVoxels(hotCells,[&](const LogicalVolume *v, const vec3i &idx) {
+          return
+            (volume->getCell(idx).getRange().contains(isoValue)
+             &&
+             seg->getCell(idx).getRange().contains(128)
+             );
+        });
+      
       std::cout << "asking ISPC to build a bvh over the hot cells..." << std::endl;
       vec3i dims = volume->getDims();
       ispc::Impi_finalize_embreeBVHoverHotCells(getIE(),model->getIE(),

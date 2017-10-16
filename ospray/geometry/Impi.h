@@ -79,6 +79,8 @@ namespace ospray {
       std::vector<CellRef> hotCells;
       
       std::shared_ptr<LogicalVolume> volume;
+      // hack for lukas: filter segmentation volume
+      std::shared_ptr<LogicalVolume> seg;
     };
 
   } // ::ospray::bilinearPatch

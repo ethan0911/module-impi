@@ -65,6 +65,9 @@ namespace ospray {
       
       /* query get the eight corner voxels (in float) of given cell */
       virtual void getCell(Cell &cell, const vec3i &cellIdx) const = 0;
+
+      /* query get the eight corner voxels (in float) of given cell */
+      inline Cell getCell(const vec3i &idx) const { Cell c; getCell(c,idx); return c; }
       
       /*! create a list of all the cell references in [lower,upper)
           whose value range overlaps the given iso-value */ 
@@ -73,6 +76,10 @@ namespace ospray {
                                                    const vec3i &upper,
                                                    const float iso) const = 0;
 
+      /*! build list of all cells that fulfill the given filter lambda */
+      template<typename Lambda>
+      void filterVoxels(std::vector<CellRef> &out, Lambda filter);
+      
       /*! create a list of *all* the cell references in the entire volume
         whose value range overlaps the given iso-value */ 
       void filterAllVoxelsThatOverLapIsoValue(std::vector<CellRef> &out,
@@ -92,6 +99,9 @@ namespace ospray {
       /*! return dimensions (in voxels, not cells!) of the underlying volume */
       virtual vec3i getDims() const override { return this->size(); }
 
+      static std::shared_ptr<LogicalVolume> loadRAW(const std::string fileName,
+                                                    const vec3i &dims);
+      
       
       inline Range getRangeOfCell(const vec3i &cellIdx) const
       {
@@ -122,5 +132,18 @@ namespace ospray {
       }
     };
 
+    /*! build list of all cells that fulfill the given filter lambda */
+    template<typename Lambda>
+    inline void LogicalVolume::filterVoxels(std::vector<CellRef> &out, Lambda filter)
+    {
+      /*! for now, do this single-threaded: \todo use tasksys ... */
+      out.clear();
+      array3D::for_each(getDims(),[&](const vec3i &idx) {
+          if (filter(this,idx))
+            out.push_back(CellRef(idx));
+        });
+    }
+
+    
   } // ::ospray::impi
 } // ::ospray

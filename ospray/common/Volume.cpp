@@ -43,7 +43,7 @@ namespace ospray {
     
     std::shared_ptr<LogicalVolume> loadTestDataSet()
     {
-#if 1
+#if 0
       /* generate a simple test volume that consists of a few blobs in space */
       const vec3i dims(64);
       std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
@@ -62,8 +62,10 @@ namespace ospray {
 #else
       /* load a (hardcoded) file ... will eventually need to get
          filename passed for loading */
-      const std::string fileName = "/home/wald/models/magnetic-512-volume/magnetic-512-volume.raw";
-      const vec3i dims(512);
+      // const std::string fileName = "/home/wald/models/magnetic-512-volume/magnetic-512-volume.raw";
+      // const vec3i dims(512);
+      const std::string fileName = "/tmp/density_064_064_2.0.raw";
+      const vec3i dims(64);
       
       FILE *file = fopen(fileName.c_str(),"rb");
       if (!file)
@@ -75,6 +77,24 @@ namespace ospray {
 #endif
     }
 
+
+    template<typename T>
+    std::shared_ptr<LogicalVolume> VolumeT<T>::loadRAW(const std::string fileName,
+                                                       const vec3i &dims)
+    {
+      std::shared_ptr<VolumeT<T>> vol = std::make_shared<VolumeT<T>>(dims);
+      // const std::string fileName = "/tmp/density_064_064_2.0.raw";
+      FILE *file = fopen(fileName.c_str(),"rb");
+      if (!file)
+        throw std::runtime_error("could not load volume '"+fileName+"'");
+      size_t numRead = fread(vol->value,dims.product(),sizeof(T),file);
+      assert(numRead == dims.product());
+      return vol;
+    }
+
+    template std::shared_ptr<LogicalVolume> VolumeT<float>::loadRAW(const std::string fileName,
+                                                                  const vec3i &dims);
+    
   } // ::ospray::impi
 } // ::ospray
 
