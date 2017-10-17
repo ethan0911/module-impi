@@ -44,13 +44,13 @@
 
 /*! function to get the 3D world bounds of a given voxel reference, to be computed on the C++ side */
 unmasked extern "C" externC_getVoxelBounds(uniform box3fa &voxelBounds,
-                                           void *uniform volume,
+                                           void *uniform c_self,
                                            const uniform uint64 voxelRef);
 
 /*! function to get the corner voxel values of a given voxel (referend
     with given voxelRef), to be computed on the C++ side */
 unmasked extern "C" externC_getVoxel(uniform Voxel &voxel,
-                                     void *uniform volume,
+                                     void *uniform c_self,
                                      const uniform uint64 voxelRef);
 
 
@@ -72,7 +72,7 @@ struct Impi {
   /*! for the embree bvh over active voxels case this is the c-handle to
       the c-side volume. this is _probably_ a C++-side virtual class
       that implements getvoxelbounds and getvoxel */
-  void *uniform volume;
+  void *uniform c_self;
 
   /*! todo - add getVoxel and getVoxelBounds as member function pointers
       (and let c++ side pass them on constructor), rather than as
@@ -150,7 +150,7 @@ unmasked void Impi_bounds(Impi *uniform self,
                           uniform size_t primID,
                           uniform box3fa &bbox)
 {
-  externC_getVoxelBounds(bbox,self->volume,self->activeVoxelRefs[primID]);
+  externC_getVoxelBounds(bbox,self->c_self,self->activeVoxelRefs[primID]);
 }
 
 
@@ -161,7 +161,7 @@ void Impi_intersect(Impi *uniform self,
                              uniform size_t primID)
 {
   uniform Voxel  voxel;
-  externC_getVoxel(voxel,self->volume,self->activeVoxelRefs[primID]);
+  externC_getVoxel(voxel,self->c_self,self->activeVoxelRefs[primID]);
   if (actualVoxelIntersect(ray,voxel,self->isoValue)) {
     ray.geomID = self->super.geomID;
     ray.primID = primID;
@@ -174,7 +174,7 @@ export void Impi_finalize(void   *uniform _self,
                           void   *uniform _model,
                           uint64 *uniform activeVoxelRefs,
                           uint64  uniform numActiveVoxelRefs,
-                          void   *uniform _volume,
+                          void   *uniform c_self,
                           uniform float   isoValue)
 {
   // first, typecast to our 'real' type. since ispc can't export real
@@ -185,7 +185,7 @@ export void Impi_finalize(void   *uniform _self,
   // set our internal data.
   self->isoValue   = isoValue;
   self->activeVoxelRefs = activeVoxelRefs;
-  self->volume      = _volume;
+  self->c_self      = c_self;
   
   // ... and let embree build a bvh, with 'numPatches' primitmives and
   // our function pointers for ray-prim interseciton and

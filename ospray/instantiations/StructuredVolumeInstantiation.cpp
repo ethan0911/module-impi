@@ -14,7 +14,7 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
-#include "Volume.h"
+#include "StructuredVolumeInstantiation.h"
 
 namespace ospray {
   namespace impi {

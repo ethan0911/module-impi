@@ -63,58 +63,38 @@ namespace ospray {
       /* assert that some valid input data is available */
     }
 
-
-    extern "C" void externC_getVoxelBounds(box3f &bounds,
-                                          const LogicalVolume *volume,
-                                          const uint64_t &voxelRef)
+    /*! ispc can't directly call virtual functions on the c++ side, so
+        we use this callback instead */
+    extern "C" void externC_getVoxelBounds(box3fa        &bounds,
+                                           const Impi    *self,
+                                           const uint64_t voxelRef)
     {
-      const vec3i voxelIdx = extractIdx(voxelRef);
-      volume->getVoxel(voxel,voxelID);
+      bounds = self->voxelSource->getVoxelBounds(voxelRef);
     }
-
-    extern "C" void externC_getVoxel(Voxel &voxel,
-                                    const LogicalVolume *volume,
-                                    const uint64_t voxelRef)
+    
+    /*! ispc can't directly call virtual functions on the c++ side, so
+        we use this callback instead */
+    extern "C" void externC_getVoxel(Impi::Voxel   &voxel,
+                                     const Impi    *self,
+                                     const uint64_t voxelRef)
     {
-      vec3i &voxelIdx = extractIndex(voxelRef);
-      volume->getVoxel(voxel,voxelIdx);
+      self->voxelSource->getVoxel(voxelRef);
     }
-
+    
     /*! 'finalize' is what ospray calls when everything is set and
         done, and a actual user geometry has to be built */
     void Impi::finalize(Model *model)
     {
-      // sanity check if a patches data was actually set!
-      float isoValue = 20.f;//0.4f;
-
-#if 1
-      std::cout << "loading test data-set, and testing generation of iso-voxels" << std::endl;
-      volume = VolumeT<float>::loadRAW("density_064_064_2.0.raw",vec3i(64));
-      seg    = VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
-
-      volume->filterVoxels(hotVoxels,[&](const LogicalVolume *v, const vec3i &idx) {
-          return
-            (volume->getVoxel(idx).getRange().contains(isoValue)
-             &&
-             seg->getVoxel(idx).getRange().contains(128)
-             );
-        });
+      float isoValue = 20.f;
       
-      std::cout << "asking ISPC to build a bvh over the hot voxels..." << std::endl;
-      vec3i dims = volume->getDims();
-      ispc::Impi_finalize_embreeBVHoverHotVoxels(getIE(),model->getIE(),
-                                                (uint64_t*)&hotVoxels[0],hotVoxels.size(),
-                                                (ispc::vec3i &)dims,
-                                                volume.get(),
-                                                isoValue);
-#else
-      /* get the acual 'raw' pointer to the data (ispc doesn't konw
-         what to do with the 'Data' abstraction calss */
-      void *voxelDataPointer = voxelData->data;
-      ispc::Impi_finalize_testVoxel(getIE(),model->getIE(),
-                                   (float*)voxelDataPointer,
-                                   isoValue);
-#endif
+      // generate list of active voxels
+      voxelSource->getActiveVoxels(activeVoxelRefs,isoValue);
+      // and ask ispc side to build the voxels
+      ispc::Impi_finalize(getIE(),model->getIE(),
+                          (uint64_t*)&activeVoxelRefs[0],
+                          activeVoxelRefs.size(),
+                          (void *)this,
+                          isoValue);
     }
 
 

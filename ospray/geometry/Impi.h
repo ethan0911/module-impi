@@ -34,32 +34,33 @@
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
 namespace ospray {
-
-  /*! though not required, it is good practice to put any module into
-    its own namespace (isnide of ospray:: ). Unlike for the naming of
-    library and init function, the naming for this namespace doesn't
-    particularlly matter. E.g., 'bilinearPatch', 'module_blp',
-    'bilinar_patch' etc would all work equally well. */
-  namespace impi {
+  namespace impi { 
     // import ospcommon component - vec3f etc
     using namespace ospcommon;
 
-    /*! a geometry type that implements (a set of) bi-linear
-      patches. This implements a new ospray geometry, and as such has
-      to
-
-      a) derive from ospray::Geometry
-      b) implement a 'commit()' message that parses the
-         parameters/data arrays that the app has specified as inputs
-      c) create an actual ospray geometry instance with the
-         proper intersect() and postIntersect() functions.
-
-      Note that how this class is called does not particularly matter;
-      all that matters is under which name it is registered in the cpp
-      file (see comments on OSPRAY_REGISTER_GEOMETRY)
-    */
+    /*! a geometry type that implements implicit iso-surfaces within
+      3D, trilinearly interpolated voxels. _where_ these voxels come
+      from is completely abstracted in this class, so it can be
+      instantiated with multiple 'voxel sources' (such as, for
+      example, a plain list of voxels to consider, or a list of active
+      voxels being extracted on-the-fly from a structued volume,
+      etc */
     struct Impi : public ospray::Geometry
     {
+      /*! a voxel made up of 8 floating point corner values, and the world space bounding box of this voxel */
+      struct Voxel {
+        float  vtx[2][2][2];
+        box3fa bounds;
+      };
+      
+      /*! interace that abstracts where the Impi is getting its voxels from */
+      struct VoxelSource {
+        typedef uint64_t VoxelRef;
+        virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const = 0;
+        virtual box3fa getVoxelBounds(const VoxelRef voxelRef) const = 0;
+        virtual Voxel  getVoxel(const VoxelRef voxelRef) const = 0;
+      };
+      
       /*! constructor - will create the 'ispc equivalent' */
       Impi();
 
@@ -74,13 +75,10 @@ namespace ospray {
         done, and a actual user geometry has to be built */
       virtual void finalize(Model *model) override;
 
-      /*! for the case where we build an embree bvh over all hot
-          voxels, this is the vector that stores them.. */
-      std::vector<uint64_t> voxelRefs;
-      
-      std::shared_ptr<LogicalVolume> volume;
-      // hack for lukas: filter segmentation volume
-      std::shared_ptr<LogicalVolume> seg;
+      /*! list of all active voxel references we are supposed to build the BVH over */
+      std::vector<VoxelSource::VoxelRef> activeVoxelRefs;
+
+      std::shared_ptr<VoxelSource> voxelSource;
     };
 
   } // ::ospray::bilinearPatch

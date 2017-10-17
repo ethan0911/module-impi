@@ -23,8 +23,8 @@
 #include "Polynomial.ih"
 
 struct Voxel {
-  float vtx[2][2][2];
-  box3f bounds;
+  float  vtx[2][2][2];
+  box3fa bounds;
 };
 
 /*! perform trilinear interpolation at position P */
@@ -161,8 +161,8 @@ inline bool actualVoxelIntersect(Ray &ray,
                                  const uniform Voxel &voxel,
                                  const uniform float isoValue)
 {
-  const uniform vec3f voxel_lo = voxel.bounds.lower;
-  const uniform vec3f voxel_hi = voxel.bounds.upper;
+  const uniform vec3f voxel_lo = make_vec3f(voxel.bounds.lower);
+  const uniform vec3f voxel_hi = make_vec3f(voxel.bounds.upper);
 
   float t0, t1;
   intersectBox(ray,voxel_lo,voxel_hi,t0,t1);
