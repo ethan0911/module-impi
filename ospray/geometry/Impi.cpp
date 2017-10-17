@@ -19,7 +19,9 @@
 #include "Impi_ispc.h"
 // ospray core:
 #include <ospray/common/Data.h>
+
 #include "../voxelSources/testCase/TestVoxel.h"
+#include "../voxelSources/testCase/TestAMR.h"
 
 // #include "../common/Volume.h"
 
@@ -88,10 +90,8 @@ namespace ospray {
         done, and a actual user geometry has to be built */
     void Impi::finalize(Model *model)
     {
-      float isoValue = 20.f;
-
       if (!voxelSource)
-        voxelSource = createVoxelSource();
+        initVoxelSourceAndIsoValue();
       
       // generate list of active voxels
       voxelSource->getActiveVoxels(activeVoxelRefs,isoValue);
@@ -105,9 +105,16 @@ namespace ospray {
 
 
     /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
-    std::shared_ptr<Impi::VoxelSource> Impi::createVoxelSource()
+    void Impi::initVoxelSourceAndIsoValue()
     {
-      return std::make_shared<testCase::TestVoxel>();
+#if 0
+      isoValue = 20.f;
+      voxelSource = std::make_shared<testCase::TestVoxel>();
+#else
+      /*! create a simple, amr-like data structure - just to test different-sized voxels right next to each other */
+      isoValue = 3.2f;
+      voxelSource = std::make_shared<testCase::TestAMR>();
+#endif
     }
     
 

@@ -174,9 +174,14 @@ inline bool actualVoxelIntersect(Ray &ray,
   const vec3f P1 = (getPoint(ray,t1)-voxel_lo)*scaleDims; // * rcp(rcpDims);
 
   const Hermite hermite = sub(computeHermite(voxel,P0,P1),isoValue);
+#if 1
   const Poly3 poly = toPoly(hermite);
+#else
+  const Bezier poly = toBezier(hermite);
+#endif
   if (findRoot(ray.t,poly,t0,t1)) {
     ray.Ng = gradient(voxel,(getPoint(ray,ray.t) - voxel_lo)*scaleDims); //*rcp(rcpDims));
+    // ray.t *= (1.f - 1-6f); //1.f/(float)(1<<20));
     return true;
   }
   return false;

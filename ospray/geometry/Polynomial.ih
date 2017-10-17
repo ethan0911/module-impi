@@ -64,6 +64,9 @@ inline Poly2 derivativeOf(const Poly3 &poly)
     there are), and reutrn the numebr of roots found */
 inline int findRoots(const Poly2 &poly, float &r0, float &r1)
 {
+  if (poly.a == 0.f)
+    return 0;
+  
   // a-b-c forumla x0/1 = (-b +/- sqrt(b^2 - 4ac))/2a
   const float r = poly.b*poly.b - 4.f*poly.a*poly.c;
   if (r <= 0.f) return 0;
@@ -82,7 +85,7 @@ inline int findRoots(const Poly2 &poly, float &r0, float &r1)
 
 inline bool sameSigns(const float a, const float b)
 {
-  return (a*b > 0.f);
+  return (a*b >= 0.f);
 }
 
 /*! find the closest root of given poly in the interval of [0,1] interval */

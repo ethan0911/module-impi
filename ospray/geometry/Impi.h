@@ -78,7 +78,7 @@ namespace ospray {
       virtual void commit() override;
 
       /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
-      std::shared_ptr<VoxelSource> createVoxelSource();
+      void initVoxelSourceAndIsoValue();
 
       /*! 'finalize' is what ospray calls when everything is set and
         done, and a actual user geometry has to be built */
@@ -87,7 +87,10 @@ namespace ospray {
       /*! list of all active voxel references we are supposed to build the BVH over */
       std::vector<VoxelSource::VoxelRef> activeVoxelRefs;
 
+      /*! the voxelsource that generates the actal voxels we need to intersect */
       std::shared_ptr<VoxelSource> voxelSource;
+      /*! the isovalue we're intersecting with */
+      float isoValue;
     };
 
   } // ::ospray::bilinearPatch
