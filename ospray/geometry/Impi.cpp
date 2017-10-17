@@ -115,10 +115,21 @@ namespace ospray {
       /*! create a simple, amr-like data structure - just to test different-sized voxels right next to each other */
       isoValue = 3.2f;
       voxelSource = std::make_shared<testCase::TestAMR>();
-#else
+#elif 0
       isoValue = 0.5f;
       std::shared_ptr<structured::LogicalVolume> volume
         = structured::createTestVolume(vec3i(64));
+      voxelSource = std::make_shared<structured::StructuredVolumeSource>(volume);
+#else
+      std::shared_ptr<structured::LogicalVolume> volume;
+      try {
+        isoValue = 0.05f;
+        volume  = structured::VolumeT<float>::loadRAW("magnetic.raw",vec3i(512));
+      } catch (std::runtime_error e) {
+        std::cout << "could not load './magnetic.raw' test file (reason: " << e.what() << "), using blob-testcase instead" << std::endl;
+        isoValue = 0.5f;
+        volume = structured::createTestVolume(vec3i(64));
+      }
       voxelSource = std::make_shared<structured::StructuredVolumeSource>(volume);
 #endif
     }

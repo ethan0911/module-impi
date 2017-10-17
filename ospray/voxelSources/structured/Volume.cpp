@@ -88,9 +88,9 @@ namespace ospray {
         FILE *file = fopen(fileName.c_str(),"rb");
         if (!file)
           throw std::runtime_error("could not load volume '"+fileName+"'");
-        size_t numRead = fread(vol->value,dims.product(),sizeof(T),file);
+        size_t numRead = fread(vol->value,sizeof(T),dims.product(),file);
         if (numRead != (size_t)dims.product())
-          throw std::runtime_error("could not read volume");
+          throw std::runtime_error("read too few data ...");
         return vol;
       }
 
