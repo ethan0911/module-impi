@@ -62,6 +62,11 @@ OSPRAY_CREATE_LIBRARY(ospray_module_impi
   # structuredvolume: generates (on the fly) all active voxels from a structured volume
   voxelSources/structured/Volume.cpp
   voxelSources/structured/StructuredVolumeSource.cpp
+  # segmented volume: a structured volume, with an additiional
+  # 'segmentatiln' volume that serves as a mask (only voxels whose
+  # range in the segmentation volume overlap a given segment value
+  # will be included
+  voxelSources/structured/SegmentedVolumeSource.cpp
 
   
   # this depends on ospray core:

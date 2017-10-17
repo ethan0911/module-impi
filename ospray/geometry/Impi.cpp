@@ -23,6 +23,7 @@
 #include "../voxelSources/testCase/TestVoxel.h"
 #include "../voxelSources/testCase/TestAMR.h"
 #include "../voxelSources/structured/StructuredVolumeSource.h"
+#include "../voxelSources/structured/SegmentedVolumeSource.h"
 
 // #include "../common/Volume.h"
 
@@ -70,7 +71,7 @@ namespace ospray {
     }
 
     /*! ispc can't directly call virtual functions on the c++ side, so
-        we use this callback instead */
+      we use this callback instead */
     extern "C" void externC_getVoxelBounds(box3fa        &bounds,
                                            const Impi    *self,
                                            const uint64_t voxelRef)
@@ -79,7 +80,7 @@ namespace ospray {
     }
     
     /*! ispc can't directly call virtual functions on the c++ side, so
-        we use this callback instead */
+      we use this callback instead */
     extern "C" void externC_getVoxel(Impi::Voxel   &voxel,
                                      const Impi    *self,
                                      const uint64_t voxelRef)
@@ -88,7 +89,7 @@ namespace ospray {
     }
     
     /*! 'finalize' is what ospray calls when everything is set and
-        done, and a actual user geometry has to be built */
+      done, and a actual user geometry has to be built */
     void Impi::finalize(Model *model)
     {
       if (!voxelSource)
@@ -120,17 +121,27 @@ namespace ospray {
       std::shared_ptr<structured::LogicalVolume> volume
         = structured::createTestVolume(vec3i(64));
       voxelSource = std::make_shared<structured::StructuredVolumeSource>(volume);
-#else
+#elif 0
       std::shared_ptr<structured::LogicalVolume> volume;
+      const std::string fileName = "magnetic.raw";
       try {
-        isoValue = 0.05f;
-        volume  = structured::VolumeT<float>::loadRAW("magnetic.raw",vec3i(512));
+        isoValue = 1.f;
+        std::cout << "loading test data set '" << fileName << "'" << std::endl;
+        volume  = structured::VolumeT<float>::loadRAW(fileName,vec3i(512));
       } catch (std::runtime_error e) {
-        std::cout << "could not load './magnetic.raw' test file (reason: " << e.what() << "), using blob-testcase instead" << std::endl;
+        std::cout << "could not load '" << fileName << "' test file (reason: " << e.what() << "), using blob-testcase instead" << std::endl;
         isoValue = 0.5f;
         volume = structured::createTestVolume(vec3i(64));
       }
       voxelSource = std::make_shared<structured::StructuredVolumeSource>(volume);
+#else
+      isoValue = 20;
+      std::shared_ptr<structured::LogicalVolume> volume
+        = structured::VolumeT<float>::loadRAW("density_064_064_2.0.raw",vec3i(64));
+      std::shared_ptr<structured::LogicalVolume> segvol
+        = structured::VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
+      PING;
+      voxelSource = std::make_shared<structured::SegmentedVolumeSource>(volume,segvol,128);
 #endif
     }
     
@@ -138,14 +149,14 @@ namespace ospray {
     
 
     /*! maybe one of the most important parts of this example: this
-        macro 'registers' the Impi class under the ospray
-        geometry type name of 'bilinear_patches'.
+      macro 'registers' the Impi class under the ospray
+      geometry type name of 'bilinear_patches'.
 
-        It is _this_ name that one can now (assuming the module has
-        been loaded with ospLoadModule(), of course) create geometries
-        with; i.e.,
+      It is _this_ name that one can now (assuming the module has
+      been loaded with ospLoadModule(), of course) create geometries
+      with; i.e.,
 
-        OSPGeometry geom = ospNewGeometry("bilinear_patches") ;
+      OSPGeometry geom = ospNewGeometry("bilinear_patches") ;
     */
     OSP_REGISTER_GEOMETRY(Impi,impi);
 

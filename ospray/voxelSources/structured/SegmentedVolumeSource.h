@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "components/ospcommon/array3D/for_each.h"
+#include "StructuredVolumeSource.h"
 #include "../../geometry/Impi.h"
 #include "./Volume.h"
 
@@ -27,24 +27,19 @@ namespace ospray {
       /*! implements a simple (vertex-cenetred) AMR test case
         consisting of a 2x2x2-cell base level in which one of the
         cells is refined into another 2x2x2-cell finer level */
-      struct StructuredVolumeSource : public Impi::VoxelSource {
-
-        StructuredVolumeSource(std::shared_ptr<impi::structured::LogicalVolume> volume)
-          : volume(volume), dims(volume->getDims()), scaleDims(rcp(vec3f(volume->getDims())-vec3f(1.f)))
+      struct SegmentedVolumeSource : public StructuredVolumeSource {
+        
+        SegmentedVolumeSource(std::shared_ptr<impi::structured::LogicalVolume> volume,
+                              std::shared_ptr<impi::structured::LogicalVolume> segVol,
+                              int segment)
+          : StructuredVolumeSource(volume), segVol(segVol), segment(segment)
         {}
         
         /*! create lits of *all* voxel (refs) we want to be considered for interesction */
         virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const override;
-        
-        /*! compute world-space bounds for given voxel */
-        virtual box3fa getVoxelBounds(const VoxelRef voxelRef) const override;
       
-        /*! get full voxel - bounds and vertex values - for given voxel */
-        virtual Impi::Voxel  getVoxel(const VoxelRef voxelRef) const override;
-      
-        std::shared_ptr<impi::structured::LogicalVolume> volume;
-        const vec3i dims;
-        const vec3f scaleDims;
+        std::shared_ptr<impi::structured::LogicalVolume> segVol;
+        const int segment;
       };
 
     }

@@ -24,11 +24,12 @@ namespace ospray {
         whose value range overlaps the given iso-value 
       */ 
       void LogicalVolume::filterAllVoxelsThatOverLapIsoValue(std::vector<VoxelRef> &out,
-                                                             const float iso) const
+                                                             const float isoValue) const
       {
         /*! for now, do this single-threaded: \todo use tasksys ... */
         out.clear();
-        filterVoxelsThatOverLapIsoValue(out,vec3i(0),getDims()-vec3i(1),iso);
+        filterVoxelsThatOverLapIsoValue(out,vec3i(0),getDims()-vec3i(1),isoValue);
+        PRINT(out.size());
       }
 
 
