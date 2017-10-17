@@ -19,8 +19,11 @@
 #include "Impi_ispc.h"
 // ospray core:
 #include <ospray/common/Data.h>
+#include "../voxelSources/testCase/TestVoxel.h"
 
-#include "../common/Volume.h"
+// #include "../common/Volume.h"
+
+
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
@@ -78,7 +81,7 @@ namespace ospray {
                                      const Impi    *self,
                                      const uint64_t voxelRef)
     {
-      self->voxelSource->getVoxel(voxelRef);
+      voxel = self->voxelSource->getVoxel(voxelRef);
     }
     
     /*! 'finalize' is what ospray calls when everything is set and
@@ -86,6 +89,9 @@ namespace ospray {
     void Impi::finalize(Model *model)
     {
       float isoValue = 20.f;
+
+      if (!voxelSource)
+        voxelSource = createVoxelSource();
       
       // generate list of active voxels
       voxelSource->getActiveVoxels(activeVoxelRefs,isoValue);
@@ -97,6 +103,15 @@ namespace ospray {
                           isoValue);
     }
 
+
+    /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
+    std::shared_ptr<Impi::VoxelSource> Impi::createVoxelSource()
+    {
+      return std::make_shared<testCase::TestVoxel>();
+    }
+    
+
+    
 
     /*! maybe one of the most important parts of this example: this
         macro 'registers' the Impi class under the ospray

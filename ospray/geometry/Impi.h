@@ -56,9 +56,15 @@ namespace ospray {
       /*! interace that abstracts where the Impi is getting its voxels from */
       struct VoxelSource {
         typedef uint64_t VoxelRef;
+
+        /*! create lits of *all* voxel (refs) we want to be considered for interesction */
         virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const = 0;
+
+        /*! compute world-space bounds for given voxel */
         virtual box3fa getVoxelBounds(const VoxelRef voxelRef) const = 0;
-        virtual Voxel  getVoxel(const VoxelRef voxelRef) const = 0;
+
+        /*! get full voxel - bounds and vertex values - for given voxel */
+        virtual Impi::Voxel getVoxel(const VoxelRef voxelRef) const = 0;
       };
       
       /*! constructor - will create the 'ispc equivalent' */
@@ -70,6 +76,9 @@ namespace ospray {
       /*! the commit() message that gets called upon the app calling
           "ospCommit(<thisGeometry>)" */
       virtual void commit() override;
+
+      /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
+      std::shared_ptr<VoxelSource> createVoxelSource();
 
       /*! 'finalize' is what ospray calls when everything is set and
         done, and a actual user geometry has to be built */
