@@ -24,6 +24,7 @@
 
 struct Voxel {
   float vtx[2][2][2];
+  box3f bounds;
 };
 
 /*! perform trilinear interpolation at position P */
@@ -158,25 +159,24 @@ inline bool unitVoxelIntersect(Ray &ray,
 
 inline bool actualVoxelIntersect(Ray &ray,
                                  const uniform Voxel &voxel,
-                                 const uniform vec3i &cellIdx,
-                                 const uniform vec3f &scaleDims,
-                                 const uniform vec3f &rcpDims,
                                  const uniform float isoValue)
 {
-  const uniform vec3f cell_lo = make_vec3f(cellIdx)*rcpDims;
-  const uniform vec3f cell_hi = cell_lo + rcpDims;
+  const uniform vec3f voxel_lo = voxel.bounds.lower;
+  const uniform vec3f voxel_hi = voxel.bounds.upper;
 
   float t0, t1;
-  intersectBox(ray,cell_lo,cell_hi,t0,t1);
+  intersectBox(ray,voxel_lo,voxel_hi,t0,t1);
   if (t0 >= t1) return false;
 
-  const vec3f P0 = (getPoint(ray,t0)-cell_lo)*scaleDims; // * rcp(rcpDims);
-  const vec3f P1 = (getPoint(ray,t1)-cell_lo)*scaleDims; // * rcp(rcpDims);
+  vec3f scaleDims = rcp(voxel_hi - voxel_lo);
+  
+  const vec3f P0 = (getPoint(ray,t0)-voxel_lo)*scaleDims; // * rcp(rcpDims);
+  const vec3f P1 = (getPoint(ray,t1)-voxel_lo)*scaleDims; // * rcp(rcpDims);
 
   const Hermite hermite = sub(computeHermite(voxel,P0,P1),isoValue);
   const Poly3 poly = toPoly(hermite);
   if (findRoot(ray.t,poly,t0,t1)) {
-    ray.Ng = gradient(voxel,(getPoint(ray,ray.t) - cell_lo)*scaleDims); //*rcp(rcpDims));
+    ray.Ng = gradient(voxel,(getPoint(ray,ray.t) - voxel_lo)*scaleDims); //*rcp(rcpDims));
     return true;
   }
   return false;

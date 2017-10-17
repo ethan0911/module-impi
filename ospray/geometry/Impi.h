@@ -75,8 +75,8 @@ namespace ospray {
       virtual void finalize(Model *model) override;
 
       /*! for the case where we build an embree bvh over all hot
-          cells, this is the vector that stores them.. */
-      std::vector<CellRef> hotCells;
+          voxels, this is the vector that stores them.. */
+      std::vector<uint64_t> voxelRefs;
       
       std::shared_ptr<LogicalVolume> volume;
       // hack for lukas: filter segmentation volume

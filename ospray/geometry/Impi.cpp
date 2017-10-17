@@ -64,11 +64,20 @@ namespace ospray {
     }
 
 
-    extern "C" void externC_getCell(Cell &cell,
-                                    const LogicalVolume *volume,
-                                    const vec3i &cellIdx)
+    extern "C" void externC_getVoxelBounds(box3f &bounds,
+                                          const LogicalVolume *volume,
+                                          const uint64_t &voxelRef)
     {
-      volume->getCell(cell,cellIdx);
+      const vec3i voxelIdx = extractIdx(voxelRef);
+      volume->getVoxel(voxel,voxelID);
+    }
+
+    extern "C" void externC_getVoxel(Voxel &voxel,
+                                    const LogicalVolume *volume,
+                                    const uint64_t voxelRef)
+    {
+      vec3i &voxelIdx = extractIndex(voxelRef);
+      volume->getVoxel(voxel,voxelIdx);
     }
 
     /*! 'finalize' is what ospray calls when everything is set and
@@ -83,18 +92,18 @@ namespace ospray {
       volume = VolumeT<float>::loadRAW("density_064_064_2.0.raw",vec3i(64));
       seg    = VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
 
-      volume->filterVoxels(hotCells,[&](const LogicalVolume *v, const vec3i &idx) {
+      volume->filterVoxels(hotVoxels,[&](const LogicalVolume *v, const vec3i &idx) {
           return
-            (volume->getCell(idx).getRange().contains(isoValue)
+            (volume->getVoxel(idx).getRange().contains(isoValue)
              &&
-             seg->getCell(idx).getRange().contains(128)
+             seg->getVoxel(idx).getRange().contains(128)
              );
         });
       
-      std::cout << "asking ISPC to build a bvh over the hot cells..." << std::endl;
+      std::cout << "asking ISPC to build a bvh over the hot voxels..." << std::endl;
       vec3i dims = volume->getDims();
-      ispc::Impi_finalize_embreeBVHoverHotCells(getIE(),model->getIE(),
-                                                (uint64_t*)&hotCells[0],hotCells.size(),
+      ispc::Impi_finalize_embreeBVHoverHotVoxels(getIE(),model->getIE(),
+                                                (uint64_t*)&hotVoxels[0],hotVoxels.size(),
                                                 (ispc::vec3i &)dims,
                                                 volume.get(),
                                                 isoValue);
@@ -102,7 +111,7 @@ namespace ospray {
       /* get the acual 'raw' pointer to the data (ispc doesn't konw
          what to do with the 'Data' abstraction calss */
       void *voxelDataPointer = voxelData->data;
-      ispc::Impi_finalize_testCell(getIE(),model->getIE(),
+      ispc::Impi_finalize_testVoxel(getIE(),model->getIE(),
                                    (float*)voxelDataPointer,
                                    isoValue);
 #endif
