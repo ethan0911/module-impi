@@ -14,16 +14,16 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
-#include "StructuredVolumeInstantiation.h"
+#include "Volume.h"
 
 namespace ospray {
   namespace impi {
     namespace structured {
 
-      /*! create a list of *all* the cell references in the entire volume
+      /*! create a list of *all* the voxel references in the entire volume
         whose value range overlaps the given iso-value 
       */ 
-      void LogicalVolume::filterAllVoxelsThatOverLapIsoValue(std::vector<CellRef> &out,
+      void LogicalVolume::filterAllVoxelsThatOverLapIsoValue(std::vector<VoxelRef> &out,
                                                              const float iso) const
       {
         /*! for now, do this single-threaded: \todo use tasksys ... */
@@ -42,11 +42,10 @@ namespace ospray {
         return 1.f - (dist/r);
       }
     
-      std::shared_ptr<LogicalVolume> loadTestDataSet()
+      std::shared_ptr<LogicalVolume> createTestVolume(const vec3i &dims)
       {
-#if 0
+// #if 1
         /* generate a simple test volume that consists of a few blobs in space */
-        const vec3i dims(64);
         std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
 
         array3D::for_each(dims,[&](const vec3i &idx){
@@ -60,22 +59,23 @@ namespace ospray {
             vol->set(idx,val);
           });
         return vol;
-#else
-        /* load a (hardcoded) file ... will eventually need to get
-           filename passed for loading */
-        // const std::string fileName = "/home/wald/models/magnetic-512-volume/magnetic-512-volume.raw";
-        // const vec3i dims(512);
-        const std::string fileName = "/tmp/density_064_064_2.0.raw";
-        const vec3i dims(64);
+// #else
+//         /* load a (hardcoded) file ... will eventually need to get
+//            filename passed for loading */
+//         // const std::string fileName = "/home/wald/models/magnetic-512-volume/magnetic-512-volume.raw";
+//         // const vec3i dims(512);
+//         const std::string fileName = "/tmp/density_064_064_2.0.raw";
+//         const vec3i dims(64);
       
-        FILE *file = fopen(fileName.c_str(),"rb");
-        if (!file)
-          throw std::runtime_error("could not load volume '"+fileName+"'");
-        std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
-        size_t numRead = fread(vol->value,dims.product(),sizeof(float),file);
-        assert(numRead == dims.product());
-        return vol;
-#endif
+//         FILE *file = fopen(fileName.c_str(),"rb");
+//         if (!file)
+//           throw std::runtime_error("could not load volume '"+fileName+"'");
+//         std::shared_ptr<VolumeT<float>> vol = std::make_shared<VolumeT<float>>(dims);
+//         size_t numRead = fread(vol->value,dims.product(),sizeof(float),file);
+//         if (numRead != (size_t)dims.product())
+//           throw std::runtime_error("could not read volume");
+//         return vol;
+// #endif
       }
 
 
@@ -89,7 +89,8 @@ namespace ospray {
         if (!file)
           throw std::runtime_error("could not load volume '"+fileName+"'");
         size_t numRead = fread(vol->value,dims.product(),sizeof(T),file);
-        assert(numRead == dims.product());
+        if (numRead != (size_t)dims.product())
+          throw std::runtime_error("could not read volume");
         return vol;
       }
 

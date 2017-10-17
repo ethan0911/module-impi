@@ -29,7 +29,7 @@
 #include <ospray/common/Model.h>
 
 // OUR includes
-#include "../common/Volume.h"
+// #include "../common/Volume.h"
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */

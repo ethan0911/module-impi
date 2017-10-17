@@ -23,6 +23,7 @@
 namespace ospray {
   namespace impi {
     namespace structured {
+      
       using namespace ospcommon;
 
       typedef ospcommon::range_t<float> Range;
@@ -90,8 +91,8 @@ namespace ospray {
                                                 const float iso) const;
       };
 
-      /*! load a test data set */
-      std::shared_ptr<LogicalVolume> loadTestDataSet();
+      /*! create a test data set of some blobs splatted into a volume of given size */
+      std::shared_ptr<LogicalVolume> createTestVolume(const vec3i &dims);
 
       /*! defines an _actual_ implementation of a volume */
       template<typename T>
@@ -148,6 +149,6 @@ namespace ospray {
           });
       }
 
-    } // ::ospray::impi::structured
+    }
   } // ::ospray::impi
 } // ::ospray

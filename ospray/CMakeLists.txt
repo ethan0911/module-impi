@@ -57,8 +57,11 @@ OSPRAY_CREATE_LIBRARY(ospray_module_impi
   # "instantiations" of the Impi abstractin: ie, class that can
   # generate voxels that Impi can then build a bvh over and intersct
 
-  # structuredvolume: generates (on the fly) all active voxels from a structured volume
+  # testamr - generates a simple, amr-like test data set
   voxelSources/testCase/TestAMR.cpp
+  # structuredvolume: generates (on the fly) all active voxels from a structured volume
+  voxelSources/structured/Volume.cpp
+  voxelSources/structured/StructuredVolumeSource.cpp
 
   
   # this depends on ospray core:

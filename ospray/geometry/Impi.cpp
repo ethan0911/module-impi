@@ -22,6 +22,7 @@
 
 #include "../voxelSources/testCase/TestVoxel.h"
 #include "../voxelSources/testCase/TestAMR.h"
+#include "../voxelSources/structured/StructuredVolumeSource.h"
 
 // #include "../common/Volume.h"
 
@@ -110,10 +111,15 @@ namespace ospray {
 #if 0
       isoValue = 20.f;
       voxelSource = std::make_shared<testCase::TestVoxel>();
-#else
+#elif 0
       /*! create a simple, amr-like data structure - just to test different-sized voxels right next to each other */
       isoValue = 3.2f;
       voxelSource = std::make_shared<testCase::TestAMR>();
+#else
+      isoValue = 0.5f;
+      std::shared_ptr<structured::LogicalVolume> volume
+        = structured::createTestVolume(vec3i(64));
+      voxelSource = std::make_shared<structured::StructuredVolumeSource>(volume);
 #endif
     }
     
