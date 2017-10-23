@@ -122,7 +122,8 @@ namespace ospray {
       // impiGeometryNode->dims = 
 #endif
 
-      auto &impiMaterial = (*impiGeometryNode)["material"];
+      auto &impiMaterial = (*(*impiGeometryNode)["materialList"].nodeAs<sg::MaterialList>())[0];
+      // auto &impiMaterial = (*impiGeometryNode)["material"];
       impiMaterial["Kd"] = vec3f(0.5f);
       impiMaterial["Ks"] = vec3f(0.1f);
       impiMaterial["Ns"] = 10.f;

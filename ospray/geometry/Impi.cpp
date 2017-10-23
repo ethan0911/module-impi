@@ -109,6 +109,8 @@ namespace ospray {
     /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
     void Impi::initVoxelSourceAndIsoValue()
     {
+            PING;
+
 #if 0
       isoValue = 20.f;
       voxelSource = std::make_shared<testCase::TestVoxel>();
@@ -142,6 +144,8 @@ namespace ospray {
         = structured::VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
       voxelSource = std::make_shared<structured::SegmentedVolumeSource>(volume,segvol,128);
 #endif
+            PING;
+
     }
     
 
