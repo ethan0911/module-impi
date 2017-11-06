@@ -59,6 +59,7 @@ OSPRAY_CREATE_LIBRARY(ospray_module_impi
 
   # testamr - generates a simple, amr-like test data set
   voxelSources/testCase/TestAMR.cpp
+  voxelSources/testCase/TestOctant.cpp
   # structuredvolume: generates (on the fly) all active voxels from a structured volume
   voxelSources/structured/Volume.cpp
   voxelSources/structured/StructuredVolumeSource.cpp
