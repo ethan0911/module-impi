@@ -145,7 +145,6 @@ namespace ospray {
         = structured::VolumeT<float>::loadRAW("density_064_064_2.0.raw",vec3i(64));
       std::shared_ptr<structured::LogicalVolume> segvol
         = structured::VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
-      PING;
       voxelSource = std::make_shared<structured::SegmentedVolumeSource>(volume,segvol,128);
 #endif
     }

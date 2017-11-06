@@ -90,7 +90,7 @@ static void Impi_postIntersect(uniform Geometry *uniform geometry,
 
   if (flags & DG_MATERIALID) {
     dg.materialID = 0;
-    dg.material   = self->super.material;
+    // dg.material   = self->super.materialList[0];
   }
 }
 
