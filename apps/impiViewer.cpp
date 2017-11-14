@@ -24,6 +24,8 @@
 #include "CommandLine.h"
 
 #include "exampleViewer/widgets/imguiViewer.h"
+#include "ospray/volume/amr/AMRVolume.h"
+
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
@@ -35,6 +37,13 @@ namespace ospray {
     particularlly matter. E.g., 'impi', 'module_blp',
     'bilinar_patch' etc would all work equally well. */
   namespace impi {
+
+    struct clTransform
+{
+  vec3f translate{0,0,0};
+  vec3f scale{.5f,.5f,.5f};
+  vec3f rotation{0,0,0};
+};
 
     /*! A Simple Triangle Mesh that stores vertex, normal, texcoord,
         and vertex color in separate arrays */
@@ -99,7 +108,43 @@ namespace ospray {
 
       auto &world = renderer["world"];
 
-      // auto &patchesInstance = world.createChild("patches", "Instance");
+
+
+      /// 
+      std::stringstream ss;
+      ss << av[1];
+      auto importerNode_ptr =
+          sg::createNode(ss.str(), "Importer")->nodeAs<sg::Importer>();
+      
+      auto &importerNode       = *importerNode_ptr;
+      importerNode["fileName"] = std::string(av[1]);
+
+      clTransform cltransform;
+      auto &transform = world.createChild("transform_" + ss.str(), "Transform");
+      transform["scale"]    = cltransform.scale;
+      transform["rotation"] = cltransform.rotation;
+
+      transform.add(importerNode_ptr);
+      renderer.traverse("verify");
+      renderer.traverse("commit");
+      auto bounds   = importerNode_ptr->computeBounds();
+      auto size     = bounds.upper - bounds.lower;
+      float maxSize = max(max(size.x, size.y), size.z);
+      if (!std::isfinite(maxSize))
+        maxSize = 0.f;  // FIXME: why is maxSize = NaN in some cases?!
+      vec3f offset = {
+          maxSize * 1.3f, maxSize * 1.3f, maxSize * 1.3f};
+      transform["position"] = cltransform.translate + offset;
+
+      auto &children = (*importerNode_ptr).children();
+      auto foundNode = std::find_if(
+          children.begin(), children.end(), [&](const sg::Node::NodeLink &n) {
+            return n.second->type() == "AMRVolume";
+          });
+      auto amrVolSGNodePtr  = foundNode->second;
+      (*amrVolSGNodePtr)["visible"] = false;
+
+        // auto &patchesInstance = world.createChild("patches", "Instance");
 
 #if 0
       ????
@@ -113,13 +158,57 @@ namespace ospray {
       impiGeometryNode->setName("impi_geometry");
       impiGeometryNode->setType("impi");
 
-      // float values[8] = { 0,0,0,0,0,0,0,1 };
-      // auto voxelArrayNode =
-      //   std::make_shared<sg::DataArray1f>((float*)values,8,false);
-      // voxelArrayNode->setName("voxel");
-      // voxelArrayNode->setType("DataArray1f");
-      // impiGeometryNode->add(voxelArrayNode);
-      // impiGeometryNode->dims = 
+      /*
+      PRINT(amrVolSGNodePtr->toString());
+      amrVolSGNodePtr->setName("amrVol");
+      impiGeometryNode->add(amrVolSGNodePtr);
+       */
+        
+      auto amrVolNode = (ospray::AMRVolume*)amrVolSGNodePtr->valueAs<OSPVolume>();
+      //PRINT(amrVolNode->toString());
+      //PRINT(amrVolNode->accel->octants.size());
+
+      //store the octant lower point & width
+      std::vector<vec3f> octantLowerPoint;
+      std::vector<float> octantWidth; //first Num store the octant NUm;Need to Fix
+      std::vector<float> octantPointValue;
+      int octantNum = amrVolNode->accel->octants.size();
+
+      octantWidth.push_back((float)octantNum);
+      for(int i = 0; i< octantNum;++i){
+        octantLowerPoint.push_back(amrVolNode->accel->octants[i].bounds.lower);
+        octantWidth.push_back(amrVolNode->accel->octants[i].width);
+        array3D::for_each(vec3i(2), [&](const vec3i vtx) {
+          octantPointValue.push_back(amrVolNode->accel->octants[i].vertexValue[vtx.z][vtx.y][vtx.x]) ;
+        });
+      }
+
+      auto octantWidthArrayNode = std::make_shared<sg::DataArray1f>(
+          (float *)octantWidth.data(), octantNum, false);
+      octantWidthArrayNode->setName("octantWidthArray");
+      octantWidthArrayNode->setType("DataArray1f");
+      impiGeometryNode->add(octantWidthArrayNode);
+
+      auto octantPointArrayNode = std::make_shared<sg::DataArray3f>(
+          (vec3f *)octantLowerPoint.data(), octantNum, false);
+      octantPointArrayNode->setName("octantPointArray");
+      octantPointArrayNode->setType("DataArray3f");
+      impiGeometryNode->add(octantPointArrayNode);
+
+      auto octantValueArrayNode = std::make_shared<sg::DataArray1f>(
+          (float *)octantPointValue.data(), octantNum, false);
+      octantValueArrayNode->setName("octantValueArray");
+      octantValueArrayNode->setType("DataArray1f");
+      impiGeometryNode->add(octantValueArrayNode);
+
+/*
+       float values[8] = { 3,0,5,0,0,0,0,1 };
+       auto voxelArrayNode =
+         std::make_shared<sg::DataArray1f>((float*)values,8,false);
+       voxelArrayNode->setName("voxel");
+       voxelArrayNode->setType("DataArray1f");
+       impiGeometryNode->add(voxelArrayNode);
+*/
 #endif
 
       auto &impiMaterial = (*(*impiGeometryNode)["materialList"].nodeAs<sg::MaterialList>())[0];
@@ -144,8 +233,8 @@ namespace ospray {
         ambient["intensity"] = 0.9f;
         ambient["color"] = vec3f(174.f/255.f,218.f/255.f,255.f/255.f);
       }
-      
-      
+
+
       // patchesInstance["model"].
       world.add(impiGeometryNode);
 

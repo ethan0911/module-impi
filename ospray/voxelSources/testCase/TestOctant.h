@@ -35,7 +35,7 @@ namespace ospray {
 
         TestOctant();
 
-        void parseOctant(std::string fileName);
+        //void parseOctant(std::string fileName);
         /*! create lits of *all* voxel (refs) we want to be considered for interesction */
         virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const override;
         
@@ -44,6 +44,8 @@ namespace ospray {
         
         /*! get full voxel - bounds and vertex values - for given voxel */
         virtual Impi::Voxel  getVoxel(const VoxelRef voxelRef) const override;
+
+        void initData(int octNum,vec3f* octLowerPnt, float* octWidth, float* octantValue);
 
         std::vector<Octant> octants;
       };

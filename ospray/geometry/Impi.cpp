@@ -25,6 +25,7 @@
 #include "../voxelSources/testCase/TestOctant.h"
 #include "../voxelSources/structured/StructuredVolumeSource.h"
 #include "../voxelSources/structured/SegmentedVolumeSource.h"
+#include "ospray/volume/amr/AMRVolume.h"
 
 // #include "../common/Volume.h"
 
@@ -48,7 +49,6 @@ namespace ospray {
         implements all the ispc-side code for intersection,
         postintersect, etc. See Impi.ispc */
       this->ispcEquivalent = ispc::Impi_create(this);
-
       // note we do _not_ yet do anything else here - the actual input
       // data isn't available to use until 'commit()' gets called
     }
@@ -66,8 +66,43 @@ namespace ospray {
       control points */
     void Impi::commit()
     {
-      // this->voxelData = getParamData("voxel");
+      if (!voxelSource) {
+        initVoxelSourceAndIsoValue();
+        auto octWData    = getParamData("octantWidthArray");
+        float *octWDataf = (float *)octWData->data;
 
+        int octNum = (int)octWDataf[0];
+        //PRINT(octNum);
+        float *octWBuff = ++octWDataf;
+        //PRINT(octWBuff[0]);
+
+        auto octPData    = getParamData("octantPointArray");
+        vec3f *octPDatav = (vec3f *)octPData->data;
+        //PRINT(octPDatav[1]);
+
+        auto octVData    = getParamData("octantValueArray");
+        float *octVDataf = (float *)octVData->data;
+        //PRINT(octVDataf[1]);
+
+        std::shared_ptr<testCase::TestOctant> testOct =
+            std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
+        testOct->initData(octNum, octPDatav, octWBuff, octVDataf);
+      }
+      // auto voxelData = getParamData("voxel");
+      // float* tmp = (float*)voxelData->data;
+      // for(int i=0;i<8;i++)
+      // PRINT(tmp[i]);
+
+      /*
+    if(hasParam("amrVol")){
+      PRINT("Has AmrVol");
+    }
+    else{
+      PRINT("No AmrVol");
+    }
+
+    auto amrVolPtr = getVoidPtr("amrVol",nullptr);
+    */
       /* assert that some valid input data is available */
     }
 
@@ -93,8 +128,7 @@ namespace ospray {
       done, and a actual user geometry has to be built */
     void Impi::finalize(Model *model)
     {
-      if (!voxelSource)
-        initVoxelSourceAndIsoValue();
+
       
       // generate list of active voxels
       voxelSource->getActiveVoxels(activeVoxelRefs,isoValue);
@@ -114,7 +148,7 @@ namespace ospray {
       isoValue = 20.f;
       voxelSource = std::make_shared<testCase::TestVoxel>();
 #elif 1
-      isoValue = 0.6f;
+      isoValue = 0.7f;
       voxelSource = std::make_shared<testCase::TestOctant>();
 
 #elif 0
