@@ -98,7 +98,10 @@ namespace ospray {
       {
         activeVoxels.clear();
         for (int i=0;i<octants.size();i++)
-          activeVoxels.push_back(i);
+        {
+          if(octants[i].getRange().contains(isoValue))
+            activeVoxels.push_back(i);
+        }
       }
 
       /*! compute world-space bounds for given voxel */

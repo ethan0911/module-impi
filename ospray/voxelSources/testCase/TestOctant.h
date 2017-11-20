@@ -13,19 +13,29 @@
 // See the License for the specific language governing permissions and      //
 // limitations under the License.                                           //
 // ======================================================================== //
-
-#include "components/ospcommon/array3D/for_each.h"
+#include "ospcommon/range.h"
+#include "ospcommon/array3D/for_each.h"
 #include "../..//geometry/Impi.h"
 
 namespace ospray {
   namespace impi { 
     namespace testCase {
+
+      typedef ospcommon::range_t<float> Range;
       
       struct Octant
       {
         box3f bounds;
         float width;
         float vertexValue[2][2][2];
+
+        inline Range getRange() const {
+          Range range;
+          array3D::for_each(vec3i(2),[&](const vec3i idx) {
+              range.extend(vertexValue[idx.z][idx.y][idx.x]);
+            });
+          return range;
+        }
       };
 
       /*! implements a simple (vertex-cenetred) AMR test case
