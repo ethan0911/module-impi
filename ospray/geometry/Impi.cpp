@@ -91,7 +91,6 @@ namespace ospray {
       }
 
       isoValue = getParam1f("isoValue", 0.7f);
-      PRINT(isoValue);
       // auto voxelData = getParamData("voxel");
       // float* tmp = (float*)voxelData->data;
       // for(int i=0;i<8;i++)
