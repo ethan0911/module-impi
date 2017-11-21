@@ -38,7 +38,7 @@ namespace ospray {
     'bilinar_patch' etc would all work equally well. */
   namespace impi {
 
-    struct clTransform
+struct clTransform
 {
   vec3f translate{0,0,0};
   vec3f scale{.5f,.5f,.5f};
@@ -111,16 +111,16 @@ namespace ospray {
 
 
       /// 
-      std::stringstream ss;
-      ss << av[1];
+      std::stringstream sFN,sValue;
+      sFN << av[1];
       auto importerNode_ptr =
-          sg::createNode(ss.str(), "Importer")->nodeAs<sg::Importer>();
+          sg::createNode(sFN.str(), "Importer")->nodeAs<sg::Importer>();
       
       auto &importerNode       = *importerNode_ptr;
-      importerNode["fileName"] = std::string(av[1]);
+      importerNode["fileName"] = sFN.str();//std::string(av[1]);
 
       clTransform cltransform;
-      auto &transform = world.createChild("transform_" + ss.str(), "Transform");
+      auto &transform = world.createChild("transform_" + sFN.str(), "Transform");
       transform["scale"]    = cltransform.scale;
       transform["rotation"] = cltransform.rotation;
 
@@ -155,6 +155,7 @@ namespace ospray {
       
 #else
       auto impiGeometryNode = std::make_shared<ImpiSGNode>();
+      impiGeometryNode->createChild("isoValue", "float", 0.65f);
       impiGeometryNode->setName("impi_geometry");
       impiGeometryNode->setType("impi");
 

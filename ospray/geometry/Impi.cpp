@@ -68,6 +68,7 @@ namespace ospray {
     {
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
+
         auto octWData    = getParamData("octantWidthArray");
         float *octWDataf = (float *)octWData->data;
 
@@ -82,12 +83,15 @@ namespace ospray {
 
         auto octVData    = getParamData("octantValueArray");
         float *octVDataf = (float *)octVData->data;
-        //PRINT(octVDataf[1]);
+        // PRINT(octVDataf[1]);
 
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
         testOct->initData(octNum, octPDatav, octWBuff, octVDataf);
       }
+
+      isoValue = getParam1f("isoValue", 0.7f);
+      PRINT(isoValue);
       // auto voxelData = getParamData("voxel");
       // float* tmp = (float*)voxelData->data;
       // for(int i=0;i<8;i++)
