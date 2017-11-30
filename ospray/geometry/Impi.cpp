@@ -69,43 +69,22 @@ namespace ospray {
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
 
-        auto octWData    = getParamData("octantWidthArray");
-        float *octWDataf = (float *)octWData->data;
+        size_t octNum = (size_t)getParam1i("octNum",0);
+        
+        auto octVetexBuffer    = getParamData("octantVertexArray");
+        vec3f *octVetex = (vec3f *)octVetexBuffer->data;
 
-        int octNum = (int)octWDataf[0];
-        //PRINT(octNum);
-        float *octWBuff = ++octWDataf;
-        //PRINT(octWBuff[0]);
-
-        auto octPData    = getParamData("octantPointArray");
-        vec3f *octPDatav = (vec3f *)octPData->data;
-        //PRINT(octPDatav[1]);
-
-        auto octVData    = getParamData("octantValueArray");
-        float *octVDataf = (float *)octVData->data;
-        // PRINT(octVDataf[1]);
+        auto octValueBuffer    = getParamData("octantValueArray");
+        float *octValue = (float *)octValueBuffer->data;
 
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-        testOct->initData(octNum, octPDatav, octWBuff, octVDataf);
+        testOct->initOctant(octNum, octVetex, octValue);
       }
 
       isoValue = getParam1f("isoValue", 0.7f);
-      // auto voxelData = getParamData("voxel");
-      // float* tmp = (float*)voxelData->data;
-      // for(int i=0;i<8;i++)
-      // PRINT(tmp[i]);
 
-      /*
-    if(hasParam("amrVol")){
-      PRINT("Has AmrVol");
-    }
-    else{
-      PRINT("No AmrVol");
-    }
-
-    auto amrVolPtr = getVoidPtr("amrVol",nullptr);
-    */
+      //auto amrVolPtr = getVoidPtr("amrVol",nullptr);
       /* assert that some valid input data is available */
     }
 

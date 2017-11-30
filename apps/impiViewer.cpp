@@ -103,8 +103,8 @@ struct clTransform
       renderer["frameBuffer"]["size"] = win_size;
 
       
-      // renderer["rendererType"] = std::string("raycast_Ns");
-      renderer["rendererType"] = std::string("scivis");
+      //renderer["rendererType"] = std::string("raycast_Ns");
+      //renderer["rendererType"] = std::string("scivis");
 
       auto &world = renderer["world"];
 
@@ -152,10 +152,18 @@ struct clTransform
       auto importerNode_ptr = sg::createNode(ss.str(), "Importer")->nodeAs<sg::Importer>();;
       auto &importerNode = *importerNode_ptr;
       importerNode["fileName"] = fileName.str();
-      
+
 #else
       auto impiGeometryNode = std::make_shared<ImpiSGNode>();
-      impiGeometryNode->createChild("isoValue", "float", 0.65f);
+      impiGeometryNode->createChild("isoValue", "float", 0.0f);
+      // impiGeometryNode->createChild("isoValue",
+      //                               "float",
+      //                               0.0f,
+      //                               sg::NodeFlags::required |
+      //                                   sg::NodeFlags::valid_min_max |
+      //                                   sg::NodeFlags::gui_slider).setMinMax(-3.0f, 3.0f);
+
+
       impiGeometryNode->setName("impi_geometry");
       impiGeometryNode->setType("impi");
 
@@ -166,41 +174,23 @@ struct clTransform
        */
         
       auto amrVolNode = (ospray::AMRVolume*)amrVolSGNodePtr->valueAs<OSPVolume>();
-      //PRINT(amrVolNode->toString());
-      //PRINT(amrVolNode->accel->octants.size());
 
-      //store the octant lower point & width
-      std::vector<vec3f> octantLowerPoint;
-      std::vector<float> octantWidth; //first Num store the octant NUm;Need to Fix
-      std::vector<float> octantPointValue;
-      int octantNum = amrVolNode->accel->octants.size();
 
-      octantWidth.push_back((float)octantNum);
-      for(int i = 0; i< octantNum;++i){
-        octantLowerPoint.push_back(amrVolNode->accel->octants[i].bounds.lower);
-        octantWidth.push_back(amrVolNode->accel->octants[i].width);
-        array3D::for_each(vec3i(2), [&](const vec3i vtx) {
-          octantPointValue.push_back(amrVolNode->accel->octants[i].vertexValue[vtx.z][vtx.y][vtx.x]) ;
-        });
-      }
+      //impiGeometryNode->createChild("octNum", "int", (int)amrVolNode->accel->octVertices.size()/8);
+      impiGeometryNode->createChild("octNum", "int", (int)amrVolNode->accel->octNum);
 
-      auto octantWidthArrayNode = std::make_shared<sg::DataArray1f>(
-          (float *)octantWidth.data(), octantNum, false);
-      octantWidthArrayNode->setName("octantWidthArray");
-      octantWidthArrayNode->setType("DataArray1f");
-      impiGeometryNode->add(octantWidthArrayNode);
-
-      auto octantPointArrayNode = std::make_shared<sg::DataArray3f>(
-          (vec3f *)octantLowerPoint.data(), octantNum, false);
-      octantPointArrayNode->setName("octantPointArray");
-      octantPointArrayNode->setType("DataArray3f");
-      impiGeometryNode->add(octantPointArrayNode);
+      auto octVertexArrayNode = std::make_shared<sg::DataArray3f>(
+          (vec3f *)amrVolNode->accel->octVertices.data(), amrVolNode->accel->octVertices.size(), false);
+      octVertexArrayNode->setName("octantVertexArray");
+      octVertexArrayNode->setType("DataArray3f");
+      impiGeometryNode->add(octVertexArrayNode);
 
       auto octantValueArrayNode = std::make_shared<sg::DataArray1f>(
-          (float *)octantPointValue.data(), octantNum, false);
+          amrVolNode->accel->octVerticeValue, amrVolNode->accel->octNum * 8, false);
       octantValueArrayNode->setName("octantValueArray");
       octantValueArrayNode->setType("DataArray1f");
       impiGeometryNode->add(octantValueArrayNode);
+
 
 /*
        float values[8] = { 3,0,5,0,0,0,0,1 };

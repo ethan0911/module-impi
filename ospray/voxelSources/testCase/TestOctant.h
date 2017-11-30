@@ -44,6 +44,7 @@ namespace ospray {
       struct TestOctant: public Impi::VoxelSource {
 
         TestOctant();
+        ~TestOctant();
 
         //void parseOctant(std::string fileName);
         /*! create lits of *all* voxel (refs) we want to be considered for interesction */
@@ -55,9 +56,14 @@ namespace ospray {
         /*! get full voxel - bounds and vertex values - for given voxel */
         virtual Impi::Voxel  getVoxel(const VoxelRef voxelRef) const override;
 
-        void initData(int octNum,vec3f* octLowerPnt, float* octWidth, float* octantValue);
+        void initOctant(size_t octNum,vec3f* octVertex, float* octValue);
 
         std::vector<Octant> octants;
+
+        size_t octNum;
+        vec3f* octVtxBuffer;
+        float* octValueBuffer;
+        std::vector<Range> octRange;
       };
 
     }

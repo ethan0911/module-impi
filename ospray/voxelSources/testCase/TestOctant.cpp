@@ -15,111 +15,98 @@
 // ======================================================================== //
 
 #include "TestOctant.h"
+#include "ospcommon/tasking/parallel_for.h"
 
 namespace ospray {
   namespace impi { 
     namespace testCase {
 
       TestOctant::TestOctant(){
-        //std::string fileName = "Octant1.oct";
-        //parseOctant(fileName);
-        //PRINT(this->octants.size());
       }
 
-      // void TestOctant::parseOctant(std::string fileName){
-      //   std::ifstream inFile;
-      //   inFile.open(fileName);
-      //   if(!inFile){
-      //     return;
-      //     //perror(("Error while opening file" + fileName).c_str());
-      //   }
-  
-      //   std::string sOctantNum;
-      //   getline(inFile,sOctantNum);
-      //   int octantNum = stoi(sOctantNum);
-
-      //   std::string line;
-      //   while(std::getline(inFile,line)){
-      //     if(line == "")
-      //       break;
-      //     std::stringstream ss(line);
-      //     vec3f p;
-      //     float cWidth;
-      //     float value[8];
-      //     ss >> p.x >> p.y >> p.z >> cWidth >> value[0] >> value[1] >>
-      //         value[2] >> value[3] >> value[4] >> value[5] >> value[6] >>
-      //         value[7];
-      //     testCase::Octant oct;
-      //     oct.bounds.lower = p;
-      //     oct.width = cWidth;
-      //     oct.bounds.upper = p + vec3f(oct.width);
-      //     oct.vertexValue[0][0][0]    = value[0];
-      //     oct.vertexValue[0][0][1]    = value[1];
-      //     oct.vertexValue[0][1][0]    = value[2];
-      //     oct.vertexValue[0][1][1]    = value[3];
-      //     oct.vertexValue[1][0][0]    = value[4];
-      //     oct.vertexValue[1][0][1]    = value[5];
-      //     oct.vertexValue[1][1][0]    = value[6];
-      //     oct.vertexValue[1][1][1]    = value[7];
-      //     octants.push_back(oct);
-      //   }
-      //   if(inFile.bad())
-      //     perror(("Error while reading file" + fileName).c_str());
-      //   inFile.close();
-
-      //   // PRINT(octantNum);
-      // }
-      void TestOctant::initData(int octNum,
-                                vec3f *octLowerPnt,
-                                float *octWidth,
-                                float *octantValue)
+      void TestOctant::initOctant(size_t octNum,vec3f* octVertex, float* octValue)
       {
-        for (int i = 0; i < octNum; ++i) {
-          testCase::Octant oct;
-          oct.bounds.lower         = octLowerPnt[i];
-          oct.width                = octWidth[i];
-          oct.bounds.upper         =  oct.bounds.lower  + vec3f(oct.width);
-          int index = 8*i;
-          oct.vertexValue[0][0][0] = octantValue[index++];
-          oct.vertexValue[0][0][1] = octantValue[index++];
-          oct.vertexValue[0][1][0] = octantValue[index++];
-          oct.vertexValue[0][1][1] = octantValue[index++];
-          oct.vertexValue[1][0][0] = octantValue[index++];
-          oct.vertexValue[1][0][1] = octantValue[index++];
-          oct.vertexValue[1][1][0] = octantValue[index++];
-          oct.vertexValue[1][1][1] = octantValue[index++];
-          octants.push_back(oct);
-        }
+        std::cout << "Start to Init Octant Value" << std::endl;
+        this->octNum = octNum;
+        this->octVtxBuffer   = octVertex;
+        this->octValueBuffer = octValue;
+
+        // for (size_t i = 0; i < this->octNum; i++) {
+        //   Range range;
+        //   for (size_t j = 0; j < 8; j++) {
+        //     size_t idx = i * 8 + j;
+        //     range.extend(this->octValueBuffer[idx]);
+        //   }
+        //   this->octRange.push_back(range);
+        // }
+
+        std::cout << "Done Init Octant Value!" << std::endl;
+      }
+
+      TestOctant::~TestOctant(){
+        if (octVtxBuffer != NULL)
+          delete[] octVtxBuffer;
+        if (octValueBuffer != NULL)
+          delete[] octValueBuffer;
       }
 
       /*! create lits of *all* voxel (refs) we want to be considered for
        * interesction */
       void TestOctant::getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const 
       {
+        float clipping = 250.0f;
         activeVoxels.clear();
-        for (int i=0;i<octants.size();i++)
-        {
-          if(octants[i].getRange().contains(isoValue))
+        std::cout<<"Filter---------------------------"<<std::endl;
+        for (size_t i = 0; i < this->octNum; i++) {
+            Range range;
+            for (size_t j = 0; j < 8; j++) {
+              size_t idx = i * 8 + j;
+              range.extend(this->octValueBuffer[idx]);
+            }
+
+          auto box = box3fa(this->octVtxBuffer[i * 8],
+                              this->octVtxBuffer[i*8 + 7]);
+          //PRINT(box);
+          if (range.contains(isoValue) && (box.upper.x < clipping)) {
             activeVoxels.push_back(i);
+          }
+            
         }
+        std::cout<<"IsoValue = "<<isoValue<<", ActiveVoxels ="<<activeVoxels.size()<<std::endl;
       }
 
       /*! compute world-space bounds for given voxel */
       box3fa TestOctant::getVoxelBounds(const VoxelRef voxelRef) const 
       {
-        const Octant& oct = octants[(const int)voxelRef];
-        return box3fa(oct.bounds.lower,oct.bounds.upper);
+        // const Octant& oct = octants[(const int)voxelRef];
+        // return box3fa(oct.bounds.lower,oct.bounds.upper);
+        size_t startIdx = voxelRef * 8;
+        return box3fa(this->octVtxBuffer[startIdx],
+                              this->octVtxBuffer[startIdx + 7]);
       }
 
       /*! get full voxel - bounds and vertex values - for given voxel */
       Impi::Voxel TestOctant::getVoxel(const VoxelRef voxelRef) const 
       {
         Impi::Voxel voxel;
-        const Octant& oct = octants[(const int)voxelRef];
-        voxel.bounds = box3fa(oct.bounds.lower,oct.bounds.upper);
-        array3D::for_each(vec3i(2),[&](const vec3i vtx){
-          voxel.vtx[vtx.z][vtx.y][vtx.x] = oct.vertexValue[vtx.z][vtx.y][vtx.x];
-        });
+        // const Octant& oct = octants[(const int)voxelRef];
+        // voxel.bounds = box3fa(oct.bounds.lower,oct.bounds.upper);
+        // array3D::for_each(vec3i(2),[&](const vec3i vtx){
+        //   voxel.vtx[vtx.z][vtx.y][vtx.x] =
+        //   oct.vertexValue[vtx.z][vtx.y][vtx.x];
+        // });
+        //size_t octID = (size_t)VoxelRef;
+        size_t startIdx = voxelRef * 8;
+        voxel.bounds = box3fa(this->octVtxBuffer[startIdx],
+                              this->octVtxBuffer[startIdx + 7]);
+        voxel.vtx[0][0][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[0][0][1] = this->octValueBuffer[startIdx++];
+        voxel.vtx[0][1][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[0][1][1] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][0][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][0][1] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][1][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][1][1] = this->octValueBuffer[startIdx++];
         return voxel;
       }
     }
