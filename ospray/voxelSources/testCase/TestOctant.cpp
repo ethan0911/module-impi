@@ -24,11 +24,12 @@ namespace ospray {
       TestOctant::TestOctant(){
       }
 
-      void TestOctant::initOctant(size_t octNum,vec3f* octVertex, float* octValue)
+      void TestOctant::initOctant(size_t octNum,vec3f* octVertex, float* octWidth,float* octValue)
       {
         std::cout << "Start to Init Octant Value" << std::endl;
         this->octNum = octNum;
         this->octVtxBuffer   = octVertex;
+        this->octWidthBuffer = octWidth;
         this->octValueBuffer = octValue;
 
         // for (size_t i = 0; i < this->octNum; i++) {
@@ -46,6 +47,8 @@ namespace ospray {
       TestOctant::~TestOctant(){
         if (octVtxBuffer != NULL)
           delete[] octVtxBuffer;
+        if(octWidthBuffer != NULL)
+          delete[] octWidthBuffer;
         if (octValueBuffer != NULL)
           delete[] octValueBuffer;
       }
@@ -64,8 +67,8 @@ namespace ospray {
               range.extend(this->octValueBuffer[idx]);
             }
 
-          auto box = box3fa(this->octVtxBuffer[i * 8],
-                              this->octVtxBuffer[i*8 + 7]);
+          auto box = box3fa(this->octVtxBuffer[i],
+                              this->octVtxBuffer[i] + vec3f(this->octWidthBuffer[i]));
           //PRINT(box);
           if (range.contains(isoValue) && (box.upper.x < clipping)) {
             activeVoxels.push_back(i);
@@ -80,9 +83,8 @@ namespace ospray {
       {
         // const Octant& oct = octants[(const int)voxelRef];
         // return box3fa(oct.bounds.lower,oct.bounds.upper);
-        size_t startIdx = voxelRef * 8;
-        return box3fa(this->octVtxBuffer[startIdx],
-                              this->octVtxBuffer[startIdx + 7]);
+        return box3fa(this->octVtxBuffer[voxelRef],
+                              this->octVtxBuffer[voxelRef] + vec3f(this->octWidthBuffer[voxelRef]));
       }
 
       /*! get full voxel - bounds and vertex values - for given voxel */
@@ -97,8 +99,8 @@ namespace ospray {
         // });
         //size_t octID = (size_t)VoxelRef;
         size_t startIdx = voxelRef * 8;
-        voxel.bounds = box3fa(this->octVtxBuffer[startIdx],
-                              this->octVtxBuffer[startIdx + 7]);
+        voxel.bounds = box3fa(this->octVtxBuffer[voxelRef],
+                              this->octVtxBuffer[voxelRef] + vec3f(this->octWidthBuffer[voxelRef]));
         voxel.vtx[0][0][0] = this->octValueBuffer[startIdx++];
         voxel.vtx[0][0][1] = this->octValueBuffer[startIdx++];
         voxel.vtx[0][1][0] = this->octValueBuffer[startIdx++];

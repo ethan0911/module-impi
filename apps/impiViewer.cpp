@@ -185,6 +185,12 @@ struct clTransform
       octVertexArrayNode->setType("DataArray3f");
       impiGeometryNode->add(octVertexArrayNode);
 
+      auto octWidthVertexArrayNode = std::make_shared<sg::DataArray3f>(
+          (vec3f *)amrVolNode->accel->octWidth.data(), amrVolNode->accel->octWidth.size(), false);
+      octWidthVertexArrayNode->setName("octantWidthArray");
+      octWidthVertexArrayNode->setType("DataArray1f");
+      impiGeometryNode->add(octWidthVertexArrayNode);
+
       auto octantValueArrayNode = std::make_shared<sg::DataArray1f>(
           amrVolNode->accel->octVerticeValue, amrVolNode->accel->octNum * 8, false);
       octantValueArrayNode->setName("octantValueArray");

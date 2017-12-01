@@ -56,12 +56,13 @@ namespace ospray {
         /*! get full voxel - bounds and vertex values - for given voxel */
         virtual Impi::Voxel  getVoxel(const VoxelRef voxelRef) const override;
 
-        void initOctant(size_t octNum,vec3f* octVertex, float* octValue);
+        void initOctant(size_t octNum,vec3f* octVertex, float* octWidth,float* octValue);
 
         std::vector<Octant> octants;
 
         size_t octNum;
         vec3f* octVtxBuffer;
+        float* octWidthBuffer;
         float* octValueBuffer;
         std::vector<Range> octRange;
       };

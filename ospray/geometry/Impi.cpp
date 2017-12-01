@@ -74,12 +74,15 @@ namespace ospray {
         auto octVetexBuffer    = getParamData("octantVertexArray");
         vec3f *octVetex = (vec3f *)octVetexBuffer->data;
 
+        auto octWidthBuffer = getParamData("octantWidthArray");
+        float* octWidth = (float*)octWidthBuffer->data;
+
         auto octValueBuffer    = getParamData("octantValueArray");
         float *octValue = (float *)octValueBuffer->data;
 
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-        testOct->initOctant(octNum, octVetex, octValue);
+        testOct->initOctant(octNum, octVetex,octWidth, octValue);
       }
 
       isoValue = getParam1f("isoValue", 0.7f);
