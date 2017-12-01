@@ -70,7 +70,7 @@ namespace ospray {
           auto box = box3fa(this->octVtxBuffer[i],
                               this->octVtxBuffer[i] + vec3f(this->octWidthBuffer[i]));
           //PRINT(box);
-          if (range.contains(isoValue) && (box.upper.x < clipping)) {
+          if (range.contains(isoValue) /*&& (box.upper.x < clipping)*/) {
             activeVoxels.push_back(i);
           }
             

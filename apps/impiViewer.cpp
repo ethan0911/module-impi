@@ -155,57 +155,13 @@ struct clTransform
 
 #else
       auto impiGeometryNode = std::make_shared<ImpiSGNode>();
-      impiGeometryNode->createChild("isoValue", "float", 0.0f);
-      // impiGeometryNode->createChild("isoValue",
-      //                               "float",
-      //                               0.0f,
-      //                               sg::NodeFlags::required |
-      //                                   sg::NodeFlags::valid_min_max |
-      //                                   sg::NodeFlags::gui_slider).setMinMax(-3.0f, 3.0f);
-
-
       impiGeometryNode->setName("impi_geometry");
       impiGeometryNode->setType("impi");
 
-      /*
-      PRINT(amrVolSGNodePtr->toString());
-      amrVolSGNodePtr->setName("amrVol");
-      impiGeometryNode->add(amrVolSGNodePtr);
-       */
-        
-      auto amrVolNode = (ospray::AMRVolume*)amrVolSGNodePtr->valueAs<OSPVolume>();
+      impiGeometryNode->createChild("isoValue", "float", 0.0f);
+      auto amrVolNode =(ospray::AMRVolume *)amrVolSGNodePtr->valueAs<OSPVolume>();
+      impiGeometryNode->createChild("amrDataPtr", "void", (void*)amrVolNode);
 
-
-      //impiGeometryNode->createChild("octNum", "int", (int)amrVolNode->accel->octVertices.size()/8);
-      impiGeometryNode->createChild("octNum", "int", (int)amrVolNode->accel->octNum);
-
-      auto octVertexArrayNode = std::make_shared<sg::DataArray3f>(
-          (vec3f *)amrVolNode->accel->octVertices.data(), amrVolNode->accel->octVertices.size(), false);
-      octVertexArrayNode->setName("octantVertexArray");
-      octVertexArrayNode->setType("DataArray3f");
-      impiGeometryNode->add(octVertexArrayNode);
-
-      auto octWidthVertexArrayNode = std::make_shared<sg::DataArray3f>(
-          (vec3f *)amrVolNode->accel->octWidth.data(), amrVolNode->accel->octWidth.size(), false);
-      octWidthVertexArrayNode->setName("octantWidthArray");
-      octWidthVertexArrayNode->setType("DataArray1f");
-      impiGeometryNode->add(octWidthVertexArrayNode);
-
-      auto octantValueArrayNode = std::make_shared<sg::DataArray1f>(
-          amrVolNode->accel->octVerticeValue, amrVolNode->accel->octNum * 8, false);
-      octantValueArrayNode->setName("octantValueArray");
-      octantValueArrayNode->setType("DataArray1f");
-      impiGeometryNode->add(octantValueArrayNode);
-
-
-/*
-       float values[8] = { 3,0,5,0,0,0,0,1 };
-       auto voxelArrayNode =
-         std::make_shared<sg::DataArray1f>((float*)values,8,false);
-       voxelArrayNode->setName("voxel");
-       voxelArrayNode->setType("DataArray1f");
-       impiGeometryNode->add(voxelArrayNode);
-*/
 #endif
 
       auto &impiMaterial = (*(*impiGeometryNode)["materialList"].nodeAs<sg::MaterialList>())[0];

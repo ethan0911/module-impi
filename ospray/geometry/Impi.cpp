@@ -69,26 +69,20 @@ namespace ospray {
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
 
-        size_t octNum = (size_t)getParam1i("octNum",0);
-        
-        auto octVetexBuffer    = getParamData("octantVertexArray");
-        vec3f *octVetex = (vec3f *)octVetexBuffer->data;
-
-        auto octWidthBuffer = getParamData("octantWidthArray");
-        float* octWidth = (float*)octWidthBuffer->data;
-
-        auto octValueBuffer    = getParamData("octantValueArray");
-        float *octValue = (float *)octValueBuffer->data;
+        auto amrDataPtrBuffer = getVoidPtr("amrDataPtr",nullptr);
+        ospray::AMRVolume *amrDataPtr = (ospray::AMRVolume *)amrDataPtrBuffer;
+        PRINT(amrDataPtr->accel->octVertices.size());
 
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-        testOct->initOctant(octNum, octVetex,octWidth, octValue);
+        testOct->initOctant(amrDataPtr->accel->octNum,
+                            (vec3f*)amrDataPtr->accel->octVertices.data(),
+                            (float*)amrDataPtr->accel->octWidth.data(),
+                            amrDataPtr->accel->octVerticeValue);
       }
 
       isoValue = getParam1f("isoValue", 0.7f);
 
-      //auto amrVolPtr = getVoidPtr("amrVol",nullptr);
-      /* assert that some valid input data is available */
     }
 
     /*! ispc can't directly call virtual functions on the c++ side, so
