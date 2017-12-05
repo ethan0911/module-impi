@@ -16,6 +16,7 @@
 #include "ospcommon/range.h"
 #include "ospcommon/array3D/for_each.h"
 #include "../..//geometry/Impi.h"
+#include "ospray/volume/amr/AMRVolume.h"
 
 namespace ospray {
   namespace impi { 
@@ -56,17 +57,27 @@ namespace ospray {
         /*! get full voxel - bounds and vertex values - for given voxel */
         virtual Impi::Voxel  getVoxel(const VoxelRef voxelRef) const override;
 
-        void initOctant(size_t octNum,vec3f* octVertex, float* octWidth,float* octValue);
+        void initOctant(ospray::AMRVolume * amrDataNode);
+
+        void getOctrange(size_t octID,Range* range)
+        {
+          for (size_t i = 0; i < 8; i++) {
+            size_t idx = octID * 8 + i;
+            range->extend(this->octValueBuffer[idx]);
+          }
+        }
 
         std::vector<Octant> octants;
 
         size_t octNum;
-        vec3f* octVtxBuffer;
-        float* octWidthBuffer;
-        float* octValueBuffer;
+        vec3f *octVtxBuffer;
+        float *octWidthBuffer;
+        float *octValueBuffer;
         std::vector<Range> octRange;
+
+        box3fa clappingBox;
       };
 
-    }
+    }  // namespace testCase
   }
 }

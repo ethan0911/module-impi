@@ -71,14 +71,10 @@ namespace ospray {
 
         auto amrDataPtrBuffer = getVoidPtr("amrDataPtr",nullptr);
         ospray::AMRVolume *amrDataPtr = (ospray::AMRVolume *)amrDataPtrBuffer;
-        PRINT(amrDataPtr->accel->octVertices.size());
 
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-        testOct->initOctant(amrDataPtr->accel->octNum,
-                            (vec3f*)amrDataPtr->accel->octVertices.data(),
-                            (float*)amrDataPtr->accel->octWidth.data(),
-                            amrDataPtr->accel->octVerticeValue);
+        testOct->initOctant(amrDataPtr);
       }
 
       isoValue = getParam1f("isoValue", 0.7f);
