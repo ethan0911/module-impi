@@ -22,6 +22,7 @@
 OPTION(OSPRAY_MODULE_IMPLICIT_ISOSURFACES "Build module the provides implicit iso-surfaces in structured grids" ON)
 IF (OSPRAY_MODULE_IMPLICIT_ISOSURFACES)
 
+
   # build the actual new ospray geometry type.  since this plug in
   # directly into the ospray core, we'll put it into a
   # '<module>/ospray' subdirectory.

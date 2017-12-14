@@ -56,11 +56,62 @@ struct clTransform
         return box3f(vec3f(0),vec3f(1));
       }
       void setFromXML(const xml::Node &node,
-                      const unsigned char *binBasePtr) override {}
+                      const unsigned char *binBasePtr) override
+      {
+      }
+
+      void postCommit(sg::RenderContext &ctx)
+      {
+        auto materialListNode    = child("materialList").nodeAs<sg::MaterialList>();
+        const auto &materialList = materialListNode->nodes;
+        if (!materialList.empty()) {
+          std::vector<OSPObject> mats;
+          for (auto mat : materialList) {
+            auto m = mat->valueAs<OSPObject>();
+            if (m)
+              mats.push_back(m);
+          }
+          auto ospMaterialList =
+              ospNewData(mats.size(), OSP_OBJECT, mats.data());
+          ospCommit(ospMaterialList);
+          ospSetData(valueAs<OSPObject>(), "materialList", ospMaterialList);
+        }
+
+        Geometry::postCommit(ctx);
+      }
     };
 
     // use ospcommon for vec3f etc
     using namespace ospcommon;
+
+    std::shared_ptr<sg::Importer> importObject2World(sg::Node& renderer, std::string fileName)
+    {
+      auto& world = renderer["world"];
+      auto importerNode_ptr =
+          sg::createNode(fileName, "Importer")->nodeAs<sg::Importer>();
+
+      auto &importerNode = *importerNode_ptr;
+      importerNode["fileName"] = fileName;
+
+      clTransform cltransform;
+      auto &transform =
+          world.createChild("transform_" + fileName, "Transform");
+      transform["scale"]    = cltransform.scale;
+      transform["rotation"] = cltransform.rotation;
+
+      transform.add(importerNode_ptr);
+      renderer.traverse("verify");
+      renderer.traverse("commit");
+      auto bounds   = importerNode_ptr->computeBounds();
+      auto size     = bounds.upper - bounds.lower;
+      float maxSize = max(max(size.x, size.y), size.z);
+      if (!std::isfinite(maxSize))
+        maxSize = 0.f;  // FIXME: why is maxSize = NaN in some cases?!
+      vec3f offset          = {maxSize * 1.3f, maxSize * 1.3f, maxSize * 1.3f};
+      transform["position"] = cltransform.translate + offset;
+      
+      return importerNode_ptr;
+    }
 
     extern "C" int main(int ac, const char **av)
     {
@@ -95,80 +146,57 @@ struct clTransform
       // parse the commandline; complain about anything we do not
       // recognize
       CommandLine args(ac,av);
-
       auto renderer_ptr = sg::createNode("renderer", "Renderer");
       auto &renderer = *renderer_ptr;
 
       auto &win_size = ospray::imgui3D::ImGui3DWidget::defaultInitSize;
       renderer["frameBuffer"]["size"] = win_size;
-
-      
-      //renderer["rendererType"] = std::string("raycast_Ns");
-      //renderer["rendererType"] = std::string("scivis");
-
+ 
+      renderer["rendererType"] = std::string("scivis");
       auto &world = renderer["world"];
+ 
+      std::stringstream sFileGear,sFileAMR;
+      sFileAMR << av[1];
+      if (sFileAMR) {
+        auto importerNode_ptr =
+            importObject2World(renderer, sFileAMR.str());
+        auto amrVolSGNodePtr = importerNode_ptr->childByType("AMRVolume");//foundNode->second;
+        (*amrVolSGNodePtr)["visible"] = false;
+        auto impiGeometryNode = std::make_shared<ImpiSGNode>();
+        impiGeometryNode->setName("impi_geometry");
+        impiGeometryNode->setType("impi");
 
+        float isoValue = 0.f;
 
+        std::string filePath = sFileAMR.str();
+        int pos              = filePath.find_last_of('/');
+        std::string fileName = filePath.substr(pos + 1);
 
-      /// 
-      std::stringstream sFN,sValue;
-      sFN << av[1];
-      auto importerNode_ptr =
-          sg::createNode(sFN.str(), "Importer")->nodeAs<sg::Importer>();
-      
-      auto &importerNode       = *importerNode_ptr;
-      importerNode["fileName"] = sFN.str();//std::string(av[1]);
+        if (fileName == "chombo_amr.osp")
+          isoValue = 0.7f;
+        if (fileName == "cb.osp")
+          isoValue = 99000.0f;
 
-      clTransform cltransform;
-      auto &transform = world.createChild("transform_" + sFN.str(), "Transform");
-      transform["scale"]    = cltransform.scale;
-      transform["rotation"] = cltransform.rotation;
+        impiGeometryNode->createChild("isoValue", "float", isoValue);
+        auto amrVolNode =
+            (ospray::AMRVolume *)(amrVolSGNodePtr->valueAs<OSPVolume>());
+        impiGeometryNode->createChild("amrDataPtr", "void", (void *)amrVolNode);
 
-      transform.add(importerNode_ptr);
-      renderer.traverse("verify");
-      renderer.traverse("commit");
-      auto bounds   = importerNode_ptr->computeBounds();
-      auto size     = bounds.upper - bounds.lower;
-      float maxSize = max(max(size.x, size.y), size.z);
-      if (!std::isfinite(maxSize))
-        maxSize = 0.f;  // FIXME: why is maxSize = NaN in some cases?!
-      vec3f offset = {
-          maxSize * 1.3f, maxSize * 1.3f, maxSize * 1.3f};
-      transform["position"] = cltransform.translate + offset;
+        auto &impiMaterial = (*(*impiGeometryNode)["materialList"]
+                                   .nodeAs<sg::MaterialList>())[0];
+        // auto &impiMaterial = (*impiGeometryNode)["material"];
+        impiMaterial["Kd"] = vec3f(0.5f);
+        impiMaterial["Ks"] = vec3f(0.1f);
+        impiMaterial["Ns"] = 10.f;
 
-      auto &children = (*importerNode_ptr).children();
-      auto foundNode = std::find_if(
-          children.begin(), children.end(), [&](const sg::Node::NodeLink &n) {
-            return n.second->type() == "AMRVolume";
-          });
-      auto amrVolSGNodePtr  = foundNode->second;
-      (*amrVolSGNodePtr)["visible"] = false;
+        world.add(impiGeometryNode);
+      }
 
-        // auto &patchesInstance = world.createChild("patches", "Instance");
-
-#if 0
-      ????
-      const std::string fileName = "test.vol";
-      auto importerNode_ptr = sg::createNode(ss.str(), "Importer")->nodeAs<sg::Importer>();;
-      auto &importerNode = *importerNode_ptr;
-      importerNode["fileName"] = fileName.str();
-
-#else
-      auto impiGeometryNode = std::make_shared<ImpiSGNode>();
-      impiGeometryNode->setName("impi_geometry");
-      impiGeometryNode->setType("impi");
-
-      impiGeometryNode->createChild("isoValue", "float", 0.0f);
-      auto amrVolNode =(ospray::AMRVolume *)amrVolSGNodePtr->valueAs<OSPVolume>();
-      impiGeometryNode->createChild("amrDataPtr", "void", (void*)amrVolNode);
-
-#endif
-
-      auto &impiMaterial = (*(*impiGeometryNode)["materialList"].nodeAs<sg::MaterialList>())[0];
-      // auto &impiMaterial = (*impiGeometryNode)["material"];
-      impiMaterial["Kd"] = vec3f(0.5f);
-      impiMaterial["Ks"] = vec3f(0.1f);
-      impiMaterial["Ns"] = 10.f;
+      ///
+      sFileGear << av[2];
+      if (sFileGear)
+        auto landingGearImportNode_ptr =
+            importObject2World(renderer, sFileGear.str());
 
       auto &lights = renderer["lights"];
       {
@@ -189,7 +217,7 @@ struct clTransform
 
 
       // patchesInstance["model"].
-      world.add(impiGeometryNode);
+      //world.add(impiGeometryNode);
 
       ospray::ImGuiViewer window(renderer_ptr);
 

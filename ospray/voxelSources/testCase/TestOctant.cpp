@@ -36,14 +36,26 @@ namespace ospray {
 
       void TestOctant::initOctant(ospray::AMRVolume * amrDataNode)
       {
+        assert(amrDataNode != NULL);
         std::cout << "Start to Init Octant Value" << std::endl;
         this->octNum         = amrDataNode->accel->octNum;
         this->octVtxBuffer   = (vec3f*)amrDataNode->accel->octVertices.data();
         this->octWidthBuffer = (float *)amrDataNode->accel->octWidth.data();
         this->octValueBuffer = amrDataNode->accel->octVerticeValue;
 
-        this->clappingBox = box3fa(amrDataNode->accel->worldBounds.lower,
-                                  0.5f * amrDataNode->accel->worldBounds.upper);
+        // this->clappingBox = box3fa(amrDataNode->accel->worldBounds.lower,
+        //                           0.5f * amrDataNode->accel->worldBounds.upper);
+
+        auto wb = amrDataNode->accel->worldBounds;
+        PRINT(wb);
+        vec3f center = wb.center();
+        box3fa b1 = box3fa(wb.lower,wb.upper);
+        b1.upper.x *= 0.5f;
+        box3fa b2 = box3fa(vec3f(center.x,0.f,0.f),vec3f(wb.upper.x,center.y,center.z));
+        box3fa b3 = box3fa(vec3f(center.x,center.y,0.f),wb.upper);
+        this->clapBoxes.push_back(b1);
+        this->clapBoxes.push_back(b2);
+        this->clapBoxes.push_back(b3);
 
         speedtest__("Speed: ")
         {
@@ -74,7 +86,7 @@ namespace ospray {
 
         for (size_t i = 0; i < this->octNum; i++) {
           auto box = box3fa(this->octVtxBuffer[i],this->octVtxBuffer[i] + vec3f(this->octWidthBuffer[i]));
-          if (octRange[i].contains(isoValue) && touchingOrOverlapping(clappingBox,box)) {
+          if (octRange[i].contains(isoValue) /*&& isInClapBox(box)*/) {
             activeVoxels.push_back(i);
           }
         }

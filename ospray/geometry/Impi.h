@@ -91,6 +91,7 @@ namespace ospray {
       std::shared_ptr<VoxelSource> voxelSource;
       /*! the isovalue we're intersecting with */
       float isoValue;
+      float lastIsoValue;
     };
 
   } // ::ospray::bilinearPatch

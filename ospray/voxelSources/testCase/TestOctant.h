@@ -17,6 +17,7 @@
 #include "ospcommon/array3D/for_each.h"
 #include "../..//geometry/Impi.h"
 #include "ospray/volume/amr/AMRVolume.h"
+#include <limits>
 
 namespace ospray {
   namespace impi { 
@@ -41,7 +42,7 @@ namespace ospray {
 
       /*! implements a simple (vertex-cenetred) AMR test case
           consisting of a 2x2x2-cell base level in which one of the
-          cells is refined into another 2x2x2-cell finer level */
+          cells is refined infilterActiveVoxelsto another 2x2x2-cell finer level */
       struct TestOctant: public Impi::VoxelSource {
 
         TestOctant();
@@ -59,13 +60,6 @@ namespace ospray {
 
         void initOctant(ospray::AMRVolume * amrDataNode);
 
-        void getOctrange(size_t octID,Range* range)
-        {
-          for (size_t i = 0; i < 8; i++) {
-            size_t idx = octID * 8 + i;
-            range->extend(this->octValueBuffer[idx]);
-          }
-        }
 
         std::vector<Octant> octants;
 
@@ -75,7 +69,26 @@ namespace ospray {
         float *octValueBuffer;
         std::vector<Range> octRange;
 
-        box3fa clappingBox;
+        std::vector<box3fa> clapBoxes;
+
+        inline bool isInClapBox(box3fa& box) const{
+          bool result = false;
+          for(auto clapbox: clapBoxes){
+            if(touchingOrOverlapping(clapbox,box)){
+              result = true;
+              break;
+            }
+          }
+          return result;
+        }
+
+        inline void getOctrange(size_t octID,Range* range)
+        {
+          for (size_t i = 0; i < 8; i++) {
+            size_t idx = octID * 8 + i;
+            range->extend(this->octValueBuffer[idx]);
+          }
+        }
       };
 
     }  // namespace testCase

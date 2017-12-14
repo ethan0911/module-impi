@@ -28,6 +28,7 @@
 #include "ospray/volume/amr/AMRVolume.h"
 
 // #include "../common/Volume.h"
+#include <limits>
 
 
 
@@ -51,6 +52,9 @@ namespace ospray {
       this->ispcEquivalent = ispc::Impi_create(this);
       // note we do _not_ yet do anything else here - the actual input
       // data isn't available to use until 'commit()' gets called
+
+      isoValue = std::numeric_limits<float>::infinity();
+      lastIsoValue = std::numeric_limits<float>::infinity();
     }
 
     /*! destructor - supposed to clean up all alloced memory */
@@ -103,10 +107,14 @@ namespace ospray {
       done, and a actual user geometry has to be built */
     void Impi::finalize(Model *model)
     {
+      Geometry::finalize(model);
 
-      
       // generate list of active voxels
-      voxelSource->getActiveVoxels(activeVoxelRefs,isoValue);
+      if (this->lastIsoValue != isoValue) {
+        voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
+        this->lastIsoValue = isoValue;
+      }
+
       // and ask ispc side to build the voxels
       ispc::Impi_finalize(getIE(),model->getIE(),
                           (uint64_t*)&activeVoxelRefs[0],
