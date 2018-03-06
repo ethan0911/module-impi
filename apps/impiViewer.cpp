@@ -25,6 +25,7 @@
 
 #include "exampleViewer/widgets/imguiViewer.h"
 #include "ospray/volume/amr/AMRVolume.h"
+#include "ospcommon/utility/getEnvVar.h"
 
 
 /*! _everything_ in the ospray core universe should _always_ be in the
@@ -38,12 +39,12 @@ namespace ospray {
     'bilinar_patch' etc would all work equally well. */
   namespace impi {
 
-struct clTransform
-{
-  vec3f translate{0,0,0};
-  vec3f scale{.5f,.5f,.5f};
-  vec3f rotation{0,0,0};
-};
+    struct clTransform
+    {
+      vec3f translate{0, 0, 0};
+      vec3f scale{.5f, .5f, .5f};
+      vec3f rotation{0, 0, 0};
+    };
 
     /*! A Simple Triangle Mesh that stores vertex, normal, texcoord,
         and vertex color in separate arrays */
@@ -151,11 +152,15 @@ struct clTransform
 
       auto &win_size = ospray::imgui3D::ImGui3DWidget::defaultInitSize;
       renderer["frameBuffer"]["size"] = win_size;
- 
+
       renderer["rendererType"] = std::string("scivis");
-      auto &world = renderer["world"];
- 
-      std::stringstream sFileGear,sFileAMR;
+      auto &world              = renderer["world"];
+
+      auto dataFromEnv =
+          ospcommon::utility::getEnvVar<std::string>("IMPI_AMR_DATA");
+      std::string dataString = dataFromEnv.value_or("cosmos");
+
+      std::stringstream sFileGear, sFileAMR;
       sFileAMR << av[1];
       if (sFileAMR) {
         auto importerNode_ptr =
@@ -170,7 +175,7 @@ struct clTransform
 
         std::string filePath = sFileAMR.str();
         int pos              = filePath.find_last_of('/');
-        std::string fileName = filePath.substr(pos + 1);
+        std::string fileName = filePath.substr(pos + 1); 
 
         if (fileName == "chombo_amr.osp")
           isoValue = 0.7f;
@@ -189,27 +194,48 @@ struct clTransform
         impiMaterial["Ks"] = vec3f(0.1f);
         impiMaterial["Ns"] = 10.f;
 
-        world.add(impiGeometryNode);
+        if (dataString == "landingGear") {
+          auto model = sg::createNode("Impl_model", "Model");
+          model->add(impiGeometryNode);
+          auto objInstance = sg::createNode("instance", "Instance");
+          objInstance->setChild("model", model);
+          model->setParent(objInstance);
+          world.add(objInstance);
+        } else {
+          world.add(impiGeometryNode);
+        }
       }
 
-      ///
-      sFileGear << av[2];
-      if (sFileGear)
-        auto landingGearImportNode_ptr =
-            importObject2World(renderer, sFileGear.str());
+      if (dataString == "landingGear") {
+        sFileGear << av[2];
+        if (sFileGear){
+          auto landingGearImportNode_ptr =
+              importObject2World(renderer, sFileGear.str());
+          auto& instance = (*landingGearImportNode_ptr)["instance"];
+          instance.child("position").setValue(vec3f(-61.61,-61.6,-93.4));
+          instance.child("scale").setValue(vec3f(2.f,2.f,2.f));
+        }
+        //obj color #020C1D
+      }
 
       auto &lights = renderer["lights"];
       {
         auto &sun = lights.createChild("sun", "DirectionalLight");
-        sun["color"] = vec3f(1.f,232.f/255.f,166.f/255.f);
-        sun["direction"] = vec3f(0.462f,-1.f,-.1f);
+        sun["color"] = vec3f(1.f,255.f/255.f,255.f/255.f);
+        sun["direction"] = vec3f(-1.f,0.679f,-0.754f);
         sun["intensity"] = 1.5f;
+
 
         auto &bounce = lights.createChild("bounce", "DirectionalLight");
         bounce["color"] = vec3f(127.f/255.f,178.f/255.f,255.f/255.f);
-        bounce["direction"] = vec3f(-.93,-.54f,-.605f);
+        bounce["direction"] = vec3f(.372f, .416f, -0.605f);
         bounce["intensity"] = 0.25f;
-        
+
+        if (dataString == "landingGear") {
+          sun["direction"]    = vec3f(.783f, -1.f, -0.086f);
+          bounce["direction"] = vec3f(.337f, .416f, -0.605f);
+        }
+
         auto &ambient = lights.createChild("ambient", "AmbientLight");
         ambient["intensity"] = 0.9f;
         ambient["color"] = vec3f(174.f/255.f,218.f/255.f,255.f/255.f);

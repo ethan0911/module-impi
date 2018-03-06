@@ -70,6 +70,7 @@ namespace ospray {
       control points */
     void Impi::commit()
     {
+      PRINT(voxelSource);
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
 
@@ -109,7 +110,7 @@ namespace ospray {
     {
       Geometry::finalize(model);
 
-      // generate list of active voxels
+      //generate list of active voxels
       if (this->lastIsoValue != isoValue) {
         voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
         this->lastIsoValue = isoValue;
