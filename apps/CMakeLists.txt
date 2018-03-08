@@ -24,13 +24,32 @@ ospray_disable_compiler_warnings()
 # example) get loaded through ospLoadModule(...), which will make sure
 # the module gets properly oaded on all worker nodes, even if those
 # live on different nodes, accelerator cards, memory spaces, etc.
-ospray_create_application(ospImplicitIsoSurfaceViewer
-  impiViewer.cpp
-  LINK
-  ospray
-  ospray_common
-  ospray_imgui3d_sg
-  ospray_sg
-  ${OPENGL_LIBRARIES}
-  ${GLUT_LIBRARIES}
-)
+if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_VIEWER)
+  ospray_create_application(ospImplicitIsoSurfaceViewer
+    impiViewer.cpp
+    LINK
+    ospray
+    ospray_common
+    ospray_imgui3d_sg
+    ospray_sg
+    ${OPENGL_LIBRARIES}
+    ${GLUT_LIBRARIES}
+    )
+endif(OSPRAY_MODULE_IMPLICIT_ISOSURFACES_VIEWER)
+
+if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
+  find_package(HDF5 REQUIRED)
+  if (HDF5_FOUND)
+    include_directories(${HDF5_INCLUDE_DIRS})
+  endif()
+  ospray_create_application(ospImplicitIsoSurfaceBatch
+    impiReader.cpp
+    impiBatch.cpp
+    LINK
+    ospray
+    ospray_common
+    ospray_xml
+    ospray_sg
+    ${HDF5_LIBRARIES}
+    )
+endif (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)

@@ -14,8 +14,6 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
-#define USE_GUI 1
-
 #include <vector>
 #include "common/sg/SceneGraph.h"
 #include "common/sg/Renderer.h"
@@ -24,11 +22,7 @@
 #include "ospray/volume/amr/AMRVolume.h"
 #include "ospcommon/utility/getEnvVar.h"
 #include "CommandLine.h"
-#ifdef USE_GUI
-# include "exampleViewer/widgets/imguiViewer.h"
-#else
-# include "../common/util/AsyncRenderEngine.h"
-#endif
+#include "exampleViewer/widgets/imguiViewer.h"
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
@@ -40,10 +34,6 @@ namespace ospray {
     particularlly matter. E.g., 'impi', 'module_blp',
     'bilinar_patch' etc would all work equally well. */
   namespace impi {
-
-#ifndef USE_GUI
-    static vec2i defaultFBSize{1024, 768};
-#endif
 
     struct clTransform
     {
@@ -197,9 +187,8 @@ namespace ospray {
       ospDeviceCommit(device);      
       loadLibrary("ospray_sg"); // access/load symbols/sg::Nodes dynamically
       ospLoadModule("impi");
-#ifdef USE_GUI
       ospray::imgui3D::init(&ac,av);
-#endif
+
       //-----------------------------------------------------
       // parse the commandline;
       // complain about anything we do not recognize
@@ -214,11 +203,7 @@ namespace ospray {
       auto renderer_ptr = sg::createNode("renderer", "Renderer");
       auto &renderer = *renderer_ptr;
 
-#ifdef USE_GUI
       auto &win_size = ospray::imgui3D::ImGui3DWidget::defaultInitSize;
-#else
-      auto &win_size = defaultFBSize;
-#endif
       renderer["frameBuffer"]["size"] = win_size;
 
       renderer["rendererType"] = std::string("scivis");
@@ -270,7 +255,6 @@ namespace ospray {
         ambient["color"] = vec3f(174.f/255.f,218.f/255.f,255.f/255.f);
       }
 
-#ifdef USE_GUI
       //-----------------------------------------------------
       // Render with OpenGL
       //-----------------------------------------------------
@@ -288,33 +272,7 @@ namespace ospray {
       }
       window.create("OSPRay Example Viewer (module) App");
       ospray::imgui3D::run();
-#else
-      //-----------------------------------------------------
-      // Without OpenGL
-      //-----------------------------------------------------
-      renderer["camera"]["dir"] = vec3f(0,0,1);
-      renderer["camera"]["pos"] = vec3f(0,0,-1);
-      renderer["camera"]["up"]  = vec3f(0,1,0);
-      renderer["camera"]["fovy"] = 60.0f;
-      renderer["camera"]["apertureRadius"] = 0.f;
-      if (renderer["camera"].hasChild("focusdistance")) {
-        renderer["camera"]["focusdistance"] = 1;
-      }
 
-      PING;
-      // scenegraph->traverse("verify");
-      // scenegraph->traverse("commit");
-      // auto bbox = scenegraph->child("world").bounds();
-      // if (bbox.empty()) {
-      // 	bbox.lower = vec3f(-5,0,-5);
-      // 	bbox.upper = vec3f(5,10,5);
-      // }
-      // setWorldBounds(bbox);
-      // renderEngine.setFbSize({1024, 768});      
-      // renderEngine.start();      
-      // originalView = viewPort;
-      
-#endif    
       return 0;
     }
 
