@@ -122,7 +122,7 @@ namespace ospray {
             oWidth.push_back(halfCW);
             oVertice.push_back(vec3f(fx, fy, fz));
           }
-#else
+#elif 0
         //finest VA
         cw = (cw == 1.0f || cw == 0.125f)
                  ? cw
@@ -134,6 +134,17 @@ namespace ospray {
               oWidth.push_back(cw);
               oVertice.push_back(vec3f(fx, fy, fz));
             }
+#else
+      for (float fz = lf.bounds.lower.z; fz < lf.bounds.upper.z;
+           fz += 0.5f * cw)
+        for (float fy = lf.bounds.lower.y; fy < lf.bounds.upper.y;
+             fy += 0.5f * cw)
+          for (float fx = lf.bounds.lower.x;
+               fx < lf.bounds.upper.x;
+               fx += 0.5f * cw) {
+            oWidth.push_back(0.5f * cw);
+            oVertice.push_back(vec3f(fx, fy, fz));
+          }
 #endif
         *outOctLowV = oVertice;
         *outOctW    = oWidth;
