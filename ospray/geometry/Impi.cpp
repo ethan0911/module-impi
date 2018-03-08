@@ -74,8 +74,14 @@ namespace ospray {
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
 
-        auto amrDataPtrBuffer = getVoidPtr("amrDataPtr",nullptr);
+	auto amrDataPtrBuffer = getParamObject("amrDataPtr",nullptr);
+        //auto amrDataPtrBuffer = getVoidPtr("amrDataPtr",nullptr);
         ospray::AMRVolume *amrDataPtr = (ospray::AMRVolume *)amrDataPtrBuffer;
+
+	if (amrDataPtrBuffer == nullptr) {
+	  std::cout << "nullptr " << std::endl;
+	}
+	std::cout << "dataptr " << amrDataPtr << std::endl;
 
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
