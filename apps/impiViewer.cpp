@@ -15,18 +15,14 @@
 // ======================================================================== //
 
 #include <vector>
-
 #include "common/sg/SceneGraph.h"
 #include "common/sg/Renderer.h"
 #include "common/sg/common/Data.h"
 #include "common/sg/geometry/Geometry.h"
-
-#include "CommandLine.h"
-
-#include "exampleViewer/widgets/imguiViewer.h"
 #include "ospray/volume/amr/AMRVolume.h"
 #include "ospcommon/utility/getEnvVar.h"
-
+#include "CommandLine.h"
+#include "exampleViewer/widgets/imguiViewer.h"
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
@@ -114,20 +110,73 @@ namespace ospray {
       return importerNode_ptr;
     }
 
+    //----------------------------------------------------------------------------
+    // Here we add all the dataset specific ha
+    //----------------------------------------------------------------------------
+    struct DataState {
+      float isoValue = 0.f;
+      vec3f sunDir = vec3f(-1.f,0.679f,-0.754f);
+      vec3f disDir = vec3f(.372f,.416f,-0.605f);
+    } dataState;
+    std::shared_ptr<sg::Node> DataParser(const std::string& dataString,
+					 const CommandLine &args, 
+					 sg::Node &renderer, sg::Node &world, 
+					 std::shared_ptr<sg::Node> impiGeometryNode)
+    {
+      if (dataString == "landingGear") {
+	// Check Arguments
+	if (args.inputFiles.size() != 2) {
+	  throw std::runtime_error("missing input arguments for 'landingGear' dataset");
+	}
+	// Setup Data States
+	dataState.sunDir = vec3f(.783f, -1.f, -0.086f);
+	dataState.disDir = vec3f(.337f, .416f, -0.605f);
+	dataState.isoValue = 99000.0f;
+	// Set Geometry (qi: what it is doing here?) 
+	auto model = sg::createNode("Impl_model", "Model");
+	model->add(impiGeometryNode);
+	auto objInstance = sg::createNode("instance", "Instance");
+	objInstance->setChild("model", model);
+	model->setParent(objInstance);
+	auto landingGearImportNodePtr = importObject2World(renderer, args.inputFiles[1]);
+	auto& instance = (*landingGearImportNodePtr)["instance"];
+	instance.child("position").setValue(vec3f(-61.61,-61.6,-93.4));
+	instance.child("scale").setValue(vec3f(2.f,2.f,2.f));	
+	return objInstance;
+      }
+      else if (dataString == "chombo") {
+	dataState.isoValue = 0.7f;
+	return impiGeometryNode;
+      }
+      else if (dataString == "chombo") {
+	dataState.isoValue = 0.0f;
+	return impiGeometryNode;
+      }
+      else {
+	return impiGeometryNode;
+      }
+    }
+    //----------------------------------------------------------------------------
+
     extern "C" int main(int ac, const char **av)
     {
+      //-----------------------------------------------------
+      // Program Initialization
+      //-----------------------------------------------------
       int init_error = ospInit(&ac, av);
+      
+      //-----------------------------------------------------
+      // Master Rank Code (worker nodes will not reach here)
+      //-----------------------------------------------------
       if (init_error != OSP_NO_ERROR) {
         std::cerr << "FATAL ERROR DURING INITIALIZATION!" << std::endl;
         return init_error;
       }
-
       auto device = ospGetCurrentDevice();
       if (device == nullptr) {
         std::cerr << "FATAL ERROR DURING GETTING CURRENT DEVICE!" << std::endl;
         return 1;
       }
-
       ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg; });
       ospDeviceSetErrorFunc(device,
                             [](OSPError e, const char *msg) {
@@ -135,18 +184,22 @@ namespace ospray {
                                         << msg << std::endl;
                               std::exit(1);
                             });
-
-      ospDeviceCommit(device);
-
-      // access/load symbols/sg::Nodes dynamically
-      loadLibrary("ospray_sg");
+      ospDeviceCommit(device);      
+      loadLibrary("ospray_sg"); // access/load symbols/sg::Nodes dynamically
       ospLoadModule("impi");
-
       ospray::imgui3D::init(&ac,av);
 
-      // parse the commandline; complain about anything we do not
-      // recognize
-      CommandLine args(ac,av);
+      //-----------------------------------------------------
+      // parse the commandline;
+      // complain about anything we do not recognize
+      //-----------------------------------------------------
+      std::string dataString = 
+	ospcommon::utility::getEnvVar<std::string>("IMPI_AMR_DATA").value_or("cosmos");     
+      CommandLine args(ac, av);
+      
+      //-----------------------------------------------------
+      // Setup Scene Graph
+      //-----------------------------------------------------
       auto renderer_ptr = sg::createNode("renderer", "Renderer");
       auto &renderer = *renderer_ptr;
 
@@ -156,97 +209,56 @@ namespace ospray {
       renderer["rendererType"] = std::string("scivis");
       auto &world              = renderer["world"];
 
-      auto dataFromEnv =
-          ospcommon::utility::getEnvVar<std::string>("IMPI_AMR_DATA");
-      std::string dataString = dataFromEnv.value_or("cosmos");
+      if (!args.inputFiles.empty()) {
+	
+        auto importerNodePtr = importObject2World(renderer, args.inputFiles[0]);
 
-      std::stringstream sFileGear, sFileAMR;
-      sFileAMR << av[1];
-      if (sFileAMR) {
-        auto importerNode_ptr =
-            importObject2World(renderer, sFileAMR.str());
-        auto amrVolSGNodePtr = importerNode_ptr->childByType("AMRVolume");//foundNode->second;
-        (*amrVolSGNodePtr)["visible"] = false;
+        auto amrVolSGNodePtr = importerNodePtr->childByType("AMRVolume"); // foundNode->second;
+        (*amrVolSGNodePtr)["visible"] = false; // AMR volume transfer function is buggy ?
+
         auto impiGeometryNode = std::make_shared<ImpiSGNode>();
         impiGeometryNode->setName("impi_geometry");
         impiGeometryNode->setType("impi");
 
-        float isoValue = 0.f;
+	auto objNode = DataParser(dataString, args, renderer, world, impiGeometryNode);
 
-        std::string filePath = sFileAMR.str();
-        int pos              = filePath.find_last_of('/');
-        std::string fileName = filePath.substr(pos + 1); 
+        impiGeometryNode->createChild("isoValue", "float", dataState.isoValue);
+        impiGeometryNode->createChild("amrDataPtr", "OSPObject", 
+				      (OSPObject)amrVolSGNodePtr->valueAs<OSPVolume>());
 
-        if (fileName == "chombo_amr.osp")
-          isoValue = 0.7f;
-        if (fileName == "cb.osp")
-          isoValue = 99000.0f;
-
-        impiGeometryNode->createChild("isoValue", "float", isoValue);
-        auto amrVolNode =
-            (ospray::AMRVolume *)(amrVolSGNodePtr->valueAs<OSPVolume>());
-        impiGeometryNode->createChild("amrDataPtr", "void", (void *)amrVolNode);
-
-        auto &impiMaterial = (*(*impiGeometryNode)["materialList"]
-                                   .nodeAs<sg::MaterialList>())[0];
-        // auto &impiMaterial = (*impiGeometryNode)["material"];
+        auto &impiMaterial = (*(*impiGeometryNode)["materialList"].nodeAs<sg::MaterialList>())[0];
         impiMaterial["Kd"] = vec3f(0.5f);
         impiMaterial["Ks"] = vec3f(0.1f);
         impiMaterial["Ns"] = 10.f;
+	
+	world.add(objNode);
 
-        if (dataString == "landingGear") {
-          auto model = sg::createNode("Impl_model", "Model");
-          model->add(impiGeometryNode);
-          auto objInstance = sg::createNode("instance", "Instance");
-          objInstance->setChild("model", model);
-          model->setParent(objInstance);
-          world.add(objInstance);
-        } else {
-          world.add(impiGeometryNode);
-        }
       }
 
-      if (dataString == "landingGear") {
-        sFileGear << av[2];
-        if (sFileGear){
-          auto landingGearImportNode_ptr =
-              importObject2World(renderer, sFileGear.str());
-          auto& instance = (*landingGearImportNode_ptr)["instance"];
-          instance.child("position").setValue(vec3f(-61.61,-61.6,-93.4));
-          instance.child("scale").setValue(vec3f(2.f,2.f,2.f));
-        }
-        //obj color #020C1D
-      }
-
+      //-----------------------------------------------------
+      // Setup Lights
+      //-----------------------------------------------------
       auto &lights = renderer["lights"];
       {
         auto &sun = lights.createChild("sun", "DirectionalLight");
         sun["color"] = vec3f(1.f,255.f/255.f,255.f/255.f);
-        sun["direction"] = vec3f(-1.f,0.679f,-0.754f);
+        sun["direction"] = dataState.sunDir;
         sun["intensity"] = 1.5f;
-
 
         auto &bounce = lights.createChild("bounce", "DirectionalLight");
         bounce["color"] = vec3f(127.f/255.f,178.f/255.f,255.f/255.f);
-        bounce["direction"] = vec3f(.372f, .416f, -0.605f);
+        bounce["direction"] = dataState.disDir;
         bounce["intensity"] = 0.25f;
-
-        if (dataString == "landingGear") {
-          sun["direction"]    = vec3f(.783f, -1.f, -0.086f);
-          bounce["direction"] = vec3f(.337f, .416f, -0.605f);
-        }
 
         auto &ambient = lights.createChild("ambient", "AmbientLight");
         ambient["intensity"] = 0.9f;
         ambient["color"] = vec3f(174.f/255.f,218.f/255.f,255.f/255.f);
       }
 
-
-      // patchesInstance["model"].
-      //world.add(impiGeometryNode);
-
+      //-----------------------------------------------------
+      // Render with OpenGL
+      //-----------------------------------------------------
       ospray::ImGuiViewer window(renderer_ptr);
-
       auto &viewPort = window.viewPort;
       // XXX SG is too restrictive: OSPRay cameras accept non-normalized directions
       auto dir = normalize(viewPort.at - viewPort.from);
@@ -255,12 +267,12 @@ namespace ospray {
       renderer["camera"]["up"]  = viewPort.up;
       renderer["camera"]["fovy"] = viewPort.openingAngle;
       renderer["camera"]["apertureRadius"] = viewPort.apertureRadius;
-      if (renderer["camera"].hasChild("focusdistance"))
+      if (renderer["camera"].hasChild("focusdistance")) {
         renderer["camera"]["focusdistance"] = length(viewPort.at - viewPort.from);
-
+      }
       window.create("OSPRay Example Viewer (module) App");
-
       ospray::imgui3D::run();
+
       return 0;
     }
 
