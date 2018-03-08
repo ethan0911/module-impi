@@ -25,11 +25,8 @@ ospray_disable_compiler_warnings()
 # the module gets properly oaded on all worker nodes, even if those
 # live on different nodes, accelerator cards, memory spaces, etc.
 ospray_create_application(ospImplicitIsoSurfaceViewer
-  # the actual viewer
   impiViewer.cpp
-
   LINK
-
   ospray
   ospray_common
   ospray_imgui3d_sg
