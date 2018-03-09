@@ -21,8 +21,8 @@
 #include "common/sg/geometry/Geometry.h"
 #include "ospray/volume/amr/AMRVolume.h"
 #include "ospcommon/utility/getEnvVar.h"
-#include "CommandLine.h"
 #include "exampleViewer/widgets/imguiViewer.h"
+#include "impiCommandLine.h"
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
