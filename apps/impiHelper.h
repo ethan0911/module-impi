@@ -66,38 +66,34 @@ namespace ospray {
       }
     }
 
-    /* template<int N, typename T> T Parse(const int ac, const char** av, int &i, T& v) { */
-    /*   const int init = i; */
-    /*   if (init + N < ac) {	 */
-    /* 	   if constexpr (std::is_scalar<T>::value) { */
-    /* 	     v = lexical_cast<double, const char*>(av[++i]); */
-    /* 	   } else {	   */
-    /* 	     for (int k = 0; k < N; ++k) { */
-    /* 	       v[k] = lexical_cast<double, const char*>(av[++i]); */
-    /* 	     } */
-    /* 	   } */
-    /*   } else { */
-    /* 	   throw std::runtime_error(std::to_string(N) + " values required for " + av[init]); */
-    /*   } */
-    /* } */
-
-    template<int N, typename T> T ParseVec(const int ac, const char** av, int &i, T& v) {
+    // retrieve input arguments
+    // because constexper cannot be used on gcc 4.8, a hack is used here
+    template<typename T> T ParseScalar(const int ac, const char** av, int &i, T& v) {
       const int init = i;
-      if (init + N < ac) {	
+      if (init + 1 < ac) {
+	v = lexical_cast<double, const char*>(av[++i]);
+      } else {
+	throw std::runtime_error("value required for " + std::string(av[init]));
+      }
+    }
+    template<int N, typename T> T Parse(const int ac, const char** av, int &i, T& v) {
+      const int init = i;
+      if (init + N < ac) {
 	for (int k = 0; k < N; ++k) {
 	  v[k] = lexical_cast<double, const char*>(av[++i]);
-	}
+	}	
       } else {
 	throw std::runtime_error(std::to_string(N) + " values required for " + av[init]);
       }
     }
-    template<typename T> T ParseScalar(const int ac, const char** av, int &i, T& v) {
-      const int init = i;
-      if (init + 1 < ac) {	
-	  v = lexical_cast<double, const char*>(av[++i]);
-      } else {
-	throw std::runtime_error("1 values required for " + std::string(av[init]));
-      }
+    template<> int Parse<1, int>(const int ac, const char** av, int &i, int& v) {
+      return ParseScalar<int>(ac, av, i, v);
+    }
+    template<> float Parse<1, float>(const int ac, const char** av, int &i, float& v) {
+      return ParseScalar<float>(ac, av, i, v);
+    }
+    template<> double Parse<1, double>(const int ac, const char** av, int &i, double& v) {
+      return ParseScalar<double>(ac, av, i, v);
     }
 
   };

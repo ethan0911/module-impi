@@ -76,25 +76,25 @@ int main(int ac, const char** av)
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
     if (str == "-iso" || str == "-isoValue") {
-      ospray::impi::ParseScalar(ac, av, i, isoValue);
+      ospray::impi::Parse<1>(ac, av, i, isoValue);
     }
     else if (str == "-translate") {
-      ospray::impi::ParseVec<3>(ac, av, i, isoTranslate);
+      ospray::impi::Parse<3>(ac, av, i, isoTranslate);
     }
     else if (str == "-scale") {
-      ospray::impi::ParseVec<3>(ac, av, i, isoScale);
+      ospray::impi::Parse<3>(ac, av, i, isoScale);
     }
     else if (str == "-fb") {
-      ospray::impi::ParseVec<2>(ac, av, i, imgSize);
+      ospray::impi::Parse<2>(ac, av, i, imgSize);
     }
     else if (str == "-vp") { 
-      ospray::impi::ParseVec<3>(ac, av, i, vp);
+      ospray::impi::Parse<3>(ac, av, i, vp);
     }
     else if (str == "-vi") {
-      ospray::impi::ParseVec<3>(ac, av, i, vi);
+      ospray::impi::Parse<3>(ac, av, i, vi);
     }
     else if (str == "-vu") { 
-      ospray::impi::ParseVec<3>(ac, av, i, vu);
+      ospray::impi::Parse<3>(ac, av, i, vu);
     }    
     else if (str == "-volume") { 
       showVolume = true;
