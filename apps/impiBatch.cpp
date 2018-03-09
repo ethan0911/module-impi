@@ -3,16 +3,27 @@
 // ======================================================================== //
 
 #include "ospray/ospray.h"
+
+#include "ospcommon/vec.h"
+#include "ospcommon/box.h"
+#include "ospcommon/range.h"
+#include "ospcommon/LinearSpace.h"
+#include "ospcommon/AffineSpace.h"
+
 #include "impiHelper.h"
 #include "impiReader.h"
-#include "impiCommandLine.h"
+//#include "loader/meshloader.h"
 
 using namespace ospcommon;
 
 static bool showVolume{false};
+static bool showObject{false};
+static std::string fileObject;
+
 static float isoValue{0.0f};
 static vec3f isoScale{1.f, 1.f, 1.f};
 static vec3f isoTranslate{.0f,.0f,.0f};
+
 static vec3f vp{43.2,44.9,-57.6};
 static vec3f vu{0,1,0};
 static vec3f vi{0,0,0};
@@ -61,43 +72,50 @@ int main(int ac, const char** av)
   // parse the commandline;
   // complain about anything we do not recognize
   //-----------------------------------------------------
-  ospray::impi::CommandLine args;
-  try {
-    args.Parse(ac, av);
-  } catch (const std::runtime_error& error) {
-    for (int i = 1; i < ac; ++i) {
-      std::string str(av[i]);
-      if (str == "-iso" || str == "-isoValue") {
-	ospray::impi::Parse<1>(ac, av, i, isoValue);
-      }
-      else if (str == "-translate") {
-	ospray::impi::Parse<3>(ac, av, i, isoTranslate);
-      }
-      else if (str == "-scale") {
-	ospray::impi::Parse<3>(ac, av, i, isoScale);
-      }
-      else if (str == "-fb") {
-	ospray::impi::Parse<2>(ac, av, i, imgSize);
-      }
-      else if (str == "-vp") { 
-	ospray::impi::Parse<3>(ac, av, i, vp);
-      }
-      else if (str == "-vi") {
-	ospray::impi::Parse<3>(ac, av, i, vi);
-      }
-      else if (str == "-vu") { 
-	ospray::impi::Parse<3>(ac, av, i, vu);
-      }    
-      else if (str == "-volume") { 
-	showVolume = true;
-      }
-      else if (str[i] == '-') {
-	throw std::runtime_error("unknown argument: " + str);
-      }
+  std::vector<std::string> inputFiles;
+  for (int i = 1; i < ac; ++i) {
+    std::string str(av[i]);
+    if (str == "-iso" || str == "-isoValue") {
+      ospray::impi::Parse<1>(ac, av, i, isoValue);
+    }
+    else if (str == "-translate") {
+      ospray::impi::Parse<3>(ac, av, i, isoTranslate);
+    }
+    else if (str == "-scale") {
+      ospray::impi::Parse<3>(ac, av, i, isoScale);
+    }
+    else if (str == "-fb") {
+      ospray::impi::Parse<2>(ac, av, i, imgSize);
+    }
+    else if (str == "-vp") { 
+      ospray::impi::Parse<3>(ac, av, i, vp);
+    }
+    else if (str == "-vi") {
+      ospray::impi::Parse<3>(ac, av, i, vi);
+    }
+    else if (str == "-vu") { 
+      ospray::impi::Parse<3>(ac, av, i, vu);
+    }    
+    else if (str == "-volume") { 
+      showVolume = true;
+    }
+    else if (str == "-object") { 
+      showObject = true;
+      fileObject = av[++i];
+    }
+    else if (str[i] == '-') {
+      throw std::runtime_error("unknown argument: " + str);
+    }
+    else {
+      inputFiles.push_back(av[i]);
     }
   }
-  if (args.inputFiles.empty()) { throw std::runtime_error("missing input file"); }
-
+  if (inputFiles.empty()) { throw std::runtime_error("missing input file"); }
+  if (inputFiles.size() > 1) {
+    for (auto& s : inputFiles) std::cout << s << std::endl;
+    throw std::runtime_error("too many input file"); 
+  }
+  
   // create world and renderer
   OSPModel world = ospNewModel();
   OSPRenderer renderer = ospNewRenderer("scivis");
@@ -115,14 +133,13 @@ int main(int ac, const char** av)
   ospRelease(opacitiesData);
 
   // setup volume
-  auto amrVolume = ospray::ParseOSP::loadOSP(args.inputFiles[0]);
+  auto amrVolume = ospray::ParseOSP::loadOSP(inputFiles[0]);
   OSPVolume volume = amrVolume->Create(transferFcn);
   if (showVolume) {
     ospAddVolume(world, volume);
   }
 
   // setup isosurface
-  OSPModel model = ospNewModel();
   OSPGeometry iso = ospNewGeometry("impi"); 
   ospSet1f(iso, "isoValue", isoValue);
   ospSetObject(iso, "amrDataPtr", volume);
@@ -133,13 +150,16 @@ int main(int ac, const char** av)
   ospCommit(mtl);
   ospSetMaterial(iso, mtl);
   ospCommit(iso);
-  ospAddGeometry(model, iso);
-  ospCommit(model);
+  ospAddGeometry(world, iso);
 
-  // setup instance
-  affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
-  OSPGeometry instance = ospNewInstance(model, (const osp::affine3f&)transform);
-  ospAddGeometry(world, instance);
+  // // setup object
+  // Mesh mesh;
+  // affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
+  // if (showObject) {
+  //   mesh.LoadFromFileObj(fileObject.c_str(), false);
+  //   mesh.SetTransform(transform);
+  //   mesh.AddToModel(world, renderer);
+  // }
 
   // setup camera
   OSPCamera camera = ospNewCamera("perspective");
@@ -200,16 +220,16 @@ int main(int ac, const char** av)
   }
 
   // render 10 more frames, which are accumulated to result in a better converged image
-  auto t = Time();
+  auto t = ospray::impi::Time();
   for (int frames = 0; frames < 10; frames++) {
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
-  auto et = Time(t);
+  auto et = ospray::impi::Time(t);
   std::cout << "#osp:bench: framerate " << 10/et << std::endl; 
 
   // save frame
   const uint32_t * buffer = (uint32_t*)ospMapFrameBuffer(fb, OSP_FB_COLOR);
-  writePPM("result.ppm", imgSize.x, imgSize.y, buffer);
+  ospray::impi::writePPM("result.ppm", imgSize.x, imgSize.y, buffer);
   ospUnmapFrameBuffer(buffer, fb);
 
   // done

@@ -19,8 +19,6 @@
 #include <ospcommon/vec.h>
 #include <ospcommon/box.h>
 #include <stdexcept>
-#include <sstream>
-#include <type_traits>
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
@@ -56,30 +54,6 @@ namespace ospray {
         }
       }
     }
-    
-    template <class T1, class T2> T1 lexical_cast(const T2& t2) {
-      std::stringstream s; s << t2; T1 t1;
-      if(s >> t1 && s.eof()) { return t1; }
-      else {
-	throw std::runtime_error("bad conversion " + s.str());
-	return T1();
-      }
-    }
-
-    template<int N, typename T> T Parse(const int ac, const char** av, int &i, T& v) {
-      const int init = i;
-      if (init + N < ac) {	
-	if constexpr (std::is_scalar<T>::value) {
-	  v = lexical_cast<double, const char*>(av[i+1]);
-	} else {	  
-	  for (int k = 0; k < N; ++k) {
-	    v[k] = lexical_cast<double, const char*>(av[i+1+k]);
-	  }
-	}
-      } else {
-	throw std::runtime_error(std::to_string(N) + " values required for " + av[init]);
-      }
-    }
-    
+        
   } // ::ospray::bilinearPatch
 } // ::ospray
