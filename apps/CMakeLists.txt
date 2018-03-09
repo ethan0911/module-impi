@@ -26,7 +26,7 @@ ospray_disable_compiler_warnings()
 # live on different nodes, accelerator cards, memory spaces, etc.
 if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_VIEWER)
   ospray_create_application(ospImplicitIsoSurfaceViewer
-    impiViewer.cpp
+    viewer/impiViewer.cpp
     LINK
     ospray
     ospray_common
@@ -42,10 +42,10 @@ if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
   if (HDF5_FOUND)
     include_directories(${HDF5_INCLUDE_DIRS})
   endif()
-  ospray_create_application(ospImplicitIsoSurfaceBatch
-    impiReader.cpp
-    impiBatch.cpp
-    loader/meshloader.cpp
+  ospray_create_application(ospImplicitIsoSurfaceBench
+    bench/impiBench.cpp
+    bench/impiReader.cpp
+    bench/loader/meshloader.cpp
     LINK
     ospray
     ospray_common
@@ -53,7 +53,7 @@ if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
     ospray_sg
     ${HDF5_LIBRARIES}
     )
-set_target_properties(ospImplicitIsoSurfaceBatch
-  PROPERTIES 
-  CXX_STANDARD 14)
+  set_target_properties(ospImplicitIsoSurfaceBench
+    PROPERTIES 
+    CXX_STANDARD 14)
 endif (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
