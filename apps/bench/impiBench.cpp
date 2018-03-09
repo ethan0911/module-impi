@@ -35,7 +35,10 @@ static vec3f isoTranslate{.0f,.0f,.0f};
 static vec3f vp{43.2,44.9,-57.6};
 static vec3f vu{0,1,0};
 static vec3f vi{0,0,0};
+static vec3f sunDir{-1.f,0.679f,-0.754f};
+static vec3f disDir{.372f,.416f,-0.605f};
 static vec2i imgSize{1024, 768};
+static vec2i numFrames{1/* skipped */, 20/* measure */};
 static std::vector<vec3f> colors = {
   vec3f(0.0, 0.000, 0.563),
   vec3f(0.0, 0.000, 1.000),
@@ -105,12 +108,27 @@ int main(int ac, const char** av)
     else if (str == "-vu") { 
       ospray::impi::Parse<3>(ac, av, i, vu);
     }    
+    else if (str == "-sun") { 
+      ospray::impi::Parse<3>(ac, av, i, sunDir);
+    }    
+    else if (str == "-dis") { 
+      ospray::impi::Parse<3>(ac, av, i, disDir);
+    }    
     else if (str == "-volume") { 
       showVolume = true;
     }
     else if (str == "-object") { 
       showObject = true;
       inputMesh = av[++i];
+    }
+    else if (str == "-frames") {
+      try {
+	ospray::impi::Parse<2>(ac, av, i, numFrames);
+      } catch (const std::runtime_error& e) {
+	throw std::runtime_error
+	  (std::string(e.what())+
+	   " usage: -frames <# of warmup frames> <# of benchmark frames>");
+      }
     }
     else if (str[i] == '-') {
       throw std::runtime_error("unknown argument: " + str);
@@ -185,13 +203,13 @@ int main(int ac, const char** av)
   ospSet1f(d_light, "intensity", 0.25f);
   ospSet1f(d_light, "angularDiameter", 0.53f);
   ospSetVec3f(d_light, "color", osp::vec3f{127.f/255.f,178.f/255.f,255.f/255.f});
-  ospSetVec3f(d_light, "direction", osp::vec3f{.372f,.416f,-0.605f});
+  ospSetVec3f(d_light, "direction", (const osp::vec3f&)disDir);
   ospCommit(d_light);
   OSPLight s_light = ospNewLight(renderer, "DirectionalLight");
   ospSet1f(s_light, "intensity", 1.50f);
   ospSet1f(s_light, "angularDiameter", 0.53f);
   ospSetVec3f(s_light, "color", osp::vec3f{1.f,1.f,1.f});  
-  ospSetVec3f(s_light, "direction", osp::vec3f{-1.f,0.679f,-0.754f});
+  ospSetVec3f(s_light, "direction", (const osp::vec3f&)sunDir);
   ospCommit(s_light);
   OSPLight a_light = ospNewLight(renderer, "AmbientLight");
   ospSet1f(a_light, "intensity", 0.90f);
@@ -223,18 +241,16 @@ int main(int ac, const char** av)
 					OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
   ospFrameBufferClear(fb, OSP_FB_COLOR | OSP_FB_ACCUM);
 
-  // skip some frames to warmup
-  for (int frames = 0; frames < 1; frames++) {
+  // render 10 more frames, which are accumulated to result in a better converged image
+  for (int frames = 0; frames < numFrames.x; frames++) {   // skip some frames to warmup
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
-
-  // render 10 more frames, which are accumulated to result in a better converged image
   auto t = ospray::impi::Time();
-  for (int frames = 0; frames < 10; frames++) {
+  for (int frames = 0; frames < numFrames.y; frames++) {
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
   auto et = ospray::impi::Time(t);
-  std::cout << "#osp:bench: framerate " << 10/et << std::endl; 
+  std::cout << "#osp:bench: average framerate: " << numFrames.y/et << std::endl; 
 
   // save frame
   const uint32_t * buffer = (uint32_t*)ospMapFrameBuffer(fb, OSP_FB_COLOR);
