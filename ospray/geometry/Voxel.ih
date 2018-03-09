@@ -154,9 +154,6 @@ inline bool unitVoxelIntersect(Ray &ray,
 #endif
 }
 
-
-
-
 inline bool actualVoxelIntersect(Ray &ray,
                                  const uniform Voxel &voxel,
                                  const uniform float isoValue)

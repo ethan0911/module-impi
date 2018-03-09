@@ -52,7 +52,6 @@ namespace ospray {
       this->ispcEquivalent = ispc::Impi_create(this);
       // note we do _not_ yet do anything else here - the actual input
       // data isn't available to use until 'commit()' gets called
-
       isoValue = std::numeric_limits<float>::infinity();
       lastIsoValue = std::numeric_limits<float>::infinity();
     }
@@ -73,23 +72,13 @@ namespace ospray {
       PRINT(voxelSource);
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
-
-	auto amrDataPtrBuffer = getParamObject("amrDataPtr",nullptr);
-        //auto amrDataPtrBuffer = getVoidPtr("amrDataPtr",nullptr);
-        ospray::AMRVolume *amrDataPtr = (ospray::AMRVolume *)amrDataPtrBuffer;
-
-	if (amrDataPtrBuffer == nullptr) {
-	  std::cout << "nullptr " << std::endl;
-	}
-	std::cout << "dataptr " << amrDataPtr << std::endl;
-
+        ospray::AMRVolume *amrDataPtr = 
+	  (ospray::AMRVolume *)getParamObject("amrDataPtr",nullptr);
         std::shared_ptr<testCase::TestOctant> testOct =
-            std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
+	  std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
         testOct->initOctant(amrDataPtr);
       }
-
       isoValue = getParam1f("isoValue", 0.7f);
-
     }
 
     /*! ispc can't directly call virtual functions on the c++ side, so
@@ -140,7 +129,6 @@ namespace ospray {
 #elif 1
       isoValue = 0.7f;
       voxelSource = std::make_shared<testCase::TestOctant>();
-
 #elif 0
       /*! create a simple, amr-like data structure - just to test different-sized voxels right next to each other */
       isoValue = 3.2f;
@@ -171,10 +159,7 @@ namespace ospray {
         = structured::VolumeT<float>::loadRAW("density_064_064_2.0_seg.raw",vec3i(64));
       voxelSource = std::make_shared<structured::SegmentedVolumeSource>(volume,segvol,128);
 #endif
-    }
-    
-
-    
+    }        
 
     /*! maybe one of the most important parts of this example: this
       macro 'registers' the Impi class under the ospray
