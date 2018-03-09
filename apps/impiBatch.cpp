@@ -9,12 +9,14 @@
 
 using namespace ospcommon;
 
-static bool showVolume = false;
-static float isoValue = 0.0f;
-static vec2i imgSize{1024, 768};
+static bool showVolume{false};
+static float isoValue{0.0f};
+static vec3f isoScale{1.f, 1.f, 1.f};
+static vec3f isoTranslate{.0f,.0f,.0f};
 static vec3f vp{43.2,44.9,-57.6};
 static vec3f vu{0,1,0};
 static vec3f vi{0,0,0};
+static vec2i imgSize{1024, 768};
 static std::vector<vec3f> colors = {
   vec3f(0.0, 0.000, 0.563),
   vec3f(0.0, 0.000, 1.000),
@@ -68,6 +70,12 @@ int main(int ac, const char** av)
       if (str == "-iso" || str == "-isoValue") {
 	ospray::impi::Parse<1>(ac, av, i, isoValue);
       }
+      else if (str == "-translate") {
+	ospray::impi::Parse<3>(ac, av, i, isoTranslate);
+      }
+      else if (str == "-scale") {
+	ospray::impi::Parse<3>(ac, av, i, isoScale);
+      }
       else if (str == "-fb") {
 	ospray::impi::Parse<2>(ac, av, i, imgSize);
       }
@@ -114,17 +122,24 @@ int main(int ac, const char** av)
   }
 
   // setup isosurface
-  OSPGeometry isosurface = ospNewGeometry("impi"); 
-  ospSet1f(isosurface, "isoValue", isoValue);
-  ospSetObject(isosurface, "amrDataPtr", volume);
+  OSPModel model = ospNewModel();
+  OSPGeometry iso = ospNewGeometry("impi"); 
+  ospSet1f(iso, "isoValue", isoValue);
+  ospSetObject(iso, "amrDataPtr", volume);
   OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
   ospSetVec3f(mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
   ospSetVec3f(mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
   ospSet1f(mtl, "Ns", 10.f);
   ospCommit(mtl);
-  ospSetMaterial(isosurface, mtl);
-  ospCommit(isosurface);
-  ospAddGeometry(world, isosurface);
+  ospSetMaterial(iso, mtl);
+  ospCommit(iso);
+  ospAddGeometry(model, iso);
+  ospCommit(model);
+
+  // setup instance
+  affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
+  OSPGeometry instance = ospNewInstance(model, (const osp::affine3f&)transform);
+  ospAddGeometry(world, instance);
 
   // setup camera
   OSPCamera camera = ospNewCamera("perspective");

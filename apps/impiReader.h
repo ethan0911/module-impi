@@ -10,6 +10,7 @@
 #include "ospcommon/vec.h"
 #include "ospcommon/box.h"
 #include "ospcommon/range.h"
+#include "ospcommon/AffineSpace.h"
 #include "common/xml/XML.h"
 #include <vector>
 #include <string>
