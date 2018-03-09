@@ -12,51 +12,40 @@ namespace ospray {
 
   namespace ParseOSP {
 
-    std::shared_ptr<ospray::impi::AMRVolume> loadOSP(const std::string &fileName)
+    std::shared_ptr<ospray::amr::AMRVolume> loadOSP(const std::string &fileName)
     {
-      std::shared_ptr<xml::XMLDoc> doc;
-      // std::shared_ptr<xml::XMLDoc> doc = NULL;
-      std::cout << "#osp:sg: starting to read OSPRay XML file '" << fileName
-                << "'" << std::endl;
-      doc = xml::readXML(fileName);
-      std::cout << "#osp:sg: XML file read, starting to parse content..."
-                << std::endl;
+      std::shared_ptr<xml::XMLDoc> doc = xml::readXML(fileName);
       assert(doc);
-
-      if (doc->child.empty())
-        throw std::runtime_error("ospray xml input file does not contain any nodes!?");
-
-      // const std::string binFileName = fileName + "bin";
-      // const unsigned char * const binBasePtr = ospray::sg::mapFile(binFileName);
-
       if (!doc) {
         throw std::runtime_error("could not parse "+fileName);
       }
+      if (doc->child.empty()) {
+        throw std::runtime_error("ospray xml input file does not contain any nodes!?");
+      }
       if (doc->child.size() != 1) {
-        throw std::runtime_error(
-          "not an ospray xml file (empty XML document; no 'ospray' child node)'");
+        throw std::runtime_error("not an ospray xml file (no 'ospray' child node)'");
       }
       if ((doc->child[0]->name != "ospray" && doc->child[0]->name != "OSPRay")) {
-        throw std::runtime_error("not an ospray xml file (document root node is '"
-          +doc->child[0]->name+"', should be 'ospray'");
+        throw std::runtime_error("not an ospray xml file (document root node is '" + 
+				 doc->child[0]->name + "', should be 'ospray'");
       }
 
       std::shared_ptr<xml::Node> root = doc->child[0];
-
-      if (doc->child[0]->name == "AMRVolume") {
-	auto volume = std::make_shared<ospray::impi::AMRVolume>();
-	if (root->child.size() == 1 && root->child[0]->name == "World") {
-	  volume->Load(*root->child[0]);
-	} else {
-	  volume->Load(*root);
-	}
-	std::cout << "#osp:sg: done parsing OSP file" << std::endl;
-        return volume;
-      } 
-      else {
-        throw std::runtime_error("not an AMR volume");
-	return nullptr;
-      }      
+      for (auto& child : root->child) {	
+	// parse AMR volume
+	if (child->name == "AMRVolume") {	  
+	  auto volume = std::make_shared<ospray::amr::AMRVolume>();
+	  std::cout << "#osp:amr: start parsing OSP file" << std::endl;
+	  volume->Load(*child);
+	  std::cout << "#osp:amr: done parsing OSP file" << std::endl;
+	  return volume;	  
+	}     
+	else {
+	  std::cout << "#osp:amr: skip node " + child->name << std::endl;
+	}   
+      }   
+      throw std::runtime_error("AMR volume not found");
+      return nullptr;      
     }
 
   };
@@ -224,7 +213,7 @@ namespace ospray {
       parseData(file, level);
       parseOffsets(file, level);
 
-      std::cout << "read input level #" << level->levelID << ", cellWidth is "
+      std::cout << "#osp:amr: read input level #" << level->levelID << ", cellWidth is "
 		<< level->dt << std::endl;
     }
 
@@ -281,7 +270,7 @@ namespace ospray {
 
         if (objID == 0) {
           if (strcmp(name, "Chombo_global")) {
-            std::cout << name << std::endl;
+            std::cout << "#osp:amr:" << name << std::endl;
             throw std::runtime_error(
                 "missing 'Chombo_global' object - apparently this is not a "
                 "chombo file!?");
@@ -302,7 +291,7 @@ namespace ospray {
           cd->level.push_back(level);
           continue;
         }
-	std::cout << "#osp:qtv:amr: unknown HDF5 block '" << name << "'"
+	std::cout << "#osp:amr: unknown HDF5 block '" << name << "'"
 		  << std::endl;
       }
 
@@ -336,7 +325,7 @@ namespace ospray {
     }
 
     //! parse Chombo hdf5 file into AMRVolume node
-    void parseAMRChomboFile(ospray::impi::AMRVolume* volume,
+    void parseAMRChomboFile(ospray::amr::AMRVolume* volume,
                             const FileName &fileName,
                             const std::string &desiredComponent,
                             const range1f *clampRange,
@@ -362,20 +351,19 @@ namespace ospray {
       }
       if (volume->componentID < 0) {
         if (desiredComponent == "") {
-	  std::cout << "no component specified - defaulting to component 0"
+	  std::cout << "#osp:amr: no component specified - defaulting to component 0"
                      << std::endl;
           volume->componentID = 0;
         } else
           throw std::runtime_error("could not find desird component '" +
                                    desiredComponent + "'");
       }
-
       for (size_t levelID = 0; levelID < amr->level.size(); levelID++) {
         Level *level = amr->level[levelID];
-	std::cout << " - level: " << levelID << " : " << level->boxes.size()
+	std::cout << "#osp:amr: - level: " << levelID << " : " << level->boxes.size()
 		  << " boxes" << std::endl;
         for (size_t brickID = 0; brickID < level->boxes.size(); brickID++) {
-	  ospray::impi::AMRVolume::BrickInfo bi;
+	  ospray::amr::AMRVolume::BrickInfo bi;
           bi.box   = level->boxes[brickID];
           bi.dt    = level->dt;
           bi.level = levelID;
@@ -398,14 +386,14 @@ namespace ospray {
         }
         level->data.clear();
       }
-      std::cout << "found " << volume->brickInfo.size() << " bricks"
+      std::cout << "#osp:amr: found " << volume->brickInfo.size() << " bricks"
 		<< std::endl;
     }
 
   }  // ::ospray::amr
 
 
-  namespace impi {
+  namespace amr {
 
     void AMRVolume::Load(const xml::Node &node) {
 
@@ -419,7 +407,8 @@ namespace ospray {
                &clampRange.upper);
       }
       if (fileName != "") {
-        std::string compName = node.getProp("component"); PRINT(compName);
+        std::string compName = node.getProp("component"); 
+	std::cout << "#osp:amr:" << compName << std::endl;;
         FileName realFN = node.doc->fileName.path() + fileName;
         if (realFN.ext() == "hdf5") {
 	ospray:ParseAMR::parseAMRChomboFile(this,
@@ -427,6 +416,7 @@ namespace ospray {
 					    compName,
 					    clampRangeString.empty() ? nullptr : &clampRange,
 					    maxLevel);
+	  this->voxelRange = this->valueRange.toVec2f();
         } else {
     	  throw std::runtime_error("non hdf5 file");
     	}        
@@ -443,6 +433,6 @@ namespace ospray {
 
     }
 
-  }; // ::ospray::impi
+  }; // ::ospray::amr
 
 }  // ::ospray

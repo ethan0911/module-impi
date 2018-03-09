@@ -36,11 +36,13 @@ namespace ospray {
     
     /*! helper class to parse command-line arguments */
     struct CommandLine {
-      CommandLine(int ac, const char **av);
+      CommandLine() = default;
+      CommandLine(int ac, const char **av) { Parse(ac, av); }
+      void Parse(int ac, const char **av);
       std::vector<std::string> inputFiles;
     };
 
-    inline CommandLine::CommandLine(int ac, const char **av)
+    inline void CommandLine::Parse(int ac, const char **av)
     {
       for (int i=1;i<ac;i++) {
         const std::string arg = av[i];
@@ -52,6 +54,6 @@ namespace ospray {
         }
       }
     }
-    
+        
   } // ::ospray::bilinearPatch
 } // ::ospray

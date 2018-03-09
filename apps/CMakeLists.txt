@@ -45,6 +45,7 @@ if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
   ospray_create_application(ospImplicitIsoSurfaceBatch
     impiReader.cpp
     impiBatch.cpp
+    loader/meshloader.cpp
     LINK
     ospray
     ospray_common
