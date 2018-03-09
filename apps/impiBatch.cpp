@@ -162,15 +162,25 @@ int main(int ac, const char** av)
 					OSP_FB_ACCUM);
   ospFrameBufferClear(fb, OSP_FB_COLOR | OSP_FB_ACCUM);
 
-  // render 10 more frames, which are accumulated to result in a better converged image
+  // skip some frames to warmup
   for (int frames = 0; frames < 10; frames++) {
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
+
+  // render 10 more frames, which are accumulated to result in a better converged image
+  auto t = Time();
+  for (int frames = 0; frames < 200; frames++) {
+    ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
+  }
+  auto et = Time(t);
+  std::cout << "#osp:bench: framerate " << 200/et << std::endl; 
 
   // save frame
   const uint32_t * buffer = (uint32_t*)ospMapFrameBuffer(fb, OSP_FB_COLOR);
   writePPM("result.ppm", imgSize.x, imgSize.y, buffer);
   ospUnmapFrameBuffer(buffer, fb);
 
+  // done
+  std::cout << "#osp:bench: done benchmarking" << std::endl;
   return 0;
 }

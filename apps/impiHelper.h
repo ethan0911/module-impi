@@ -12,6 +12,7 @@
 #else
 #  include <alloca.h>
 #endif
+#include <chrono>
 
 // helper function to write the rendered image as PPM file
 inline void writePPM(const char *fileName,
@@ -37,4 +38,16 @@ inline void writePPM(const char *fileName,
   }
   fprintf(file, "\n");
   fclose(file);
+}
+
+// timer
+typedef std::chrono::high_resolution_clock::time_point time_point;
+time_point Time() {
+  return std::chrono::high_resolution_clock::now();
+}
+double Time(const time_point& t1) {
+  time_point t2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> et = 
+    std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+  return et.count();  
 }
