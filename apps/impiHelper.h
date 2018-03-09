@@ -66,18 +66,37 @@ namespace ospray {
       }
     }
 
-    template<int N, typename T> T Parse(const int ac, const char** av, int &i, T& v) {
+    /* template<int N, typename T> T Parse(const int ac, const char** av, int &i, T& v) { */
+    /*   const int init = i; */
+    /*   if (init + N < ac) {	 */
+    /* 	   if constexpr (std::is_scalar<T>::value) { */
+    /* 	     v = lexical_cast<double, const char*>(av[++i]); */
+    /* 	   } else {	   */
+    /* 	     for (int k = 0; k < N; ++k) { */
+    /* 	       v[k] = lexical_cast<double, const char*>(av[++i]); */
+    /* 	     } */
+    /* 	   } */
+    /*   } else { */
+    /* 	   throw std::runtime_error(std::to_string(N) + " values required for " + av[init]); */
+    /*   } */
+    /* } */
+
+    template<int N, typename T> T ParseVec(const int ac, const char** av, int &i, T& v) {
       const int init = i;
       if (init + N < ac) {	
-	if constexpr (std::is_scalar<T>::value) {
-	    v = lexical_cast<double, const char*>(av[++i]);
-	  } else {	  
-	  for (int k = 0; k < N; ++k) {
-	    v[k] = lexical_cast<double, const char*>(av[++i]);
-	  }
+	for (int k = 0; k < N; ++k) {
+	  v[k] = lexical_cast<double, const char*>(av[++i]);
 	}
       } else {
 	throw std::runtime_error(std::to_string(N) + " values required for " + av[init]);
+      }
+    }
+    template<typename T> T ParseScalar(const int ac, const char** av, int &i, T& v) {
+      const int init = i;
+      if (init + 1 < ac) {	
+	  v = lexical_cast<double, const char*>(av[++i]);
+      } else {
+	throw std::runtime_error("1 values required for " + std::string(av[init]));
       }
     }
 
