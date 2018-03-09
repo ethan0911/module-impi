@@ -12,13 +12,12 @@
 
 #include "impiHelper.h"
 #include "impiReader.h"
-//#include "loader/meshloader.h"
+#include "loader/meshloader.h"
 
 using namespace ospcommon;
 
 static bool showVolume{false};
 static bool showObject{false};
-static std::string fileObject;
 
 static float isoValue{0.0f};
 static vec3f isoScale{1.f, 1.f, 1.f};
@@ -73,6 +72,7 @@ int main(int ac, const char** av)
   // complain about anything we do not recognize
   //-----------------------------------------------------
   std::vector<std::string> inputFiles;
+  std::string              inputMesh;
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
     if (str == "-iso" || str == "-isoValue") {
@@ -101,7 +101,7 @@ int main(int ac, const char** av)
     }
     else if (str == "-object") { 
       showObject = true;
-      fileObject = av[++i];
+      inputMesh = av[++i];
     }
     else if (str[i] == '-') {
       throw std::runtime_error("unknown argument: " + str);
@@ -152,14 +152,14 @@ int main(int ac, const char** av)
   ospCommit(iso);
   ospAddGeometry(world, iso);
 
-  // // setup object
-  // Mesh mesh;
-  // affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
-  // if (showObject) {
-  //   mesh.LoadFromFileObj(fileObject.c_str(), false);
-  //   mesh.SetTransform(transform);
-  //   mesh.AddToModel(world, renderer);
-  // }
+  // setup object
+  Mesh mesh;
+  affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
+  if (showObject) {
+    mesh.LoadFromFileObj(inputMesh.c_str(), false);
+    mesh.SetTransform(transform);
+    mesh.AddToModel(world, renderer);
+  }
 
   // setup camera
   OSPCamera camera = ospNewCamera("perspective");

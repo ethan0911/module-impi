@@ -48,21 +48,6 @@ std::string ParsePath(const std::string& str)
 }
 
 void
-Mesh::Material::LoadMtl
-(const tinyobj::material_t& tinymtl, std::string& dpath)
-{
-  // load constants
-  Kd = vec3f(tinymtl.diffuse[0],
-	     tinymtl.diffuse[1],
-	     tinymtl.diffuse[2]); // default 0.f
-  Ks = vec3f(tinymtl.specular[0],
-	     tinymtl.specular[1],
-	     tinymtl.specular[2]);
-  Ns = tinymtl.shininess;
-  d  = tinymtl.dissolve;
-}
-
-void
 Mesh::ComputePath
 (const std::string& str)
 {
@@ -86,7 +71,6 @@ Mesh::TinyObjLoader::Clear()
   attributes.normals.clear();
   attributes.texcoords.clear();
   shapes.clear();
-  materials.clear();
 }
 
 void
@@ -110,7 +94,7 @@ Mesh::LoadFromFileObj
 				  &(tiny.err), 
 				  fpath.c_str(),
 				  dpath == "" ? nullptr : dpath.c_str(),
-				  true);
+				  loadMtl);
   if (!tiny.err.empty()) { ErrorNoExit(tiny.err); }
   if (!succeed) { return false; }
 
@@ -118,9 +102,7 @@ Mesh::LoadFromFileObj
   bbox.upper = vec3f(std::numeric_limits<float>::min());
   bbox.lower = vec3f(std::numeric_limits<float>::max());
 
-  // initialize _geometries_ and _materials_ array
-  // note: the last material is the default
-  materials.resize(tiny.materials.size()+1); 
+  // initialize geometries array
   geometries.resize(tiny.shapes.size());
 
   // process geometry
@@ -131,11 +113,7 @@ Mesh::LoadFromFileObj
     //       but we need only one material per geometry
     //       so we use the first face for material index
     geo.num_faces = tiny.shapes[s].mesh.num_face_vertices.size();
-    if (geo.num_faces > 0)
-    {
-      geo.mtl_index = tiny.shapes[s].mesh.material_ids[0];
-    }
-    else
+    if (geo.num_faces <= 0)
     {
       WarnAlways("shape #" +
 		 std::to_string(s) +
@@ -192,17 +170,11 @@ Mesh::LoadFromFileObj
     }
   }
   
-  // process materials
-  for (int i = 0; i < tiny.materials.size(); ++i)
-  {
-    materials[i].LoadMtl(tiny.materials[i], dpath);
-  }
-
   center = 0.5f * (bbox.upper + bbox.lower);
   return true;
 }
 
-void Mesh::AddToModel(OSPModel& model, OSPRenderer& renderer)
+void Mesh::AddToModel(OSPModel model, OSPRenderer renderer, OSPMaterial mtl)
 {
   for (auto& geo : geometries)
   {    
@@ -250,34 +222,22 @@ void Mesh::AddToModel(OSPModel& model, OSPRenderer& renderer)
 	ospRelease(tdata);
       }
 
-      // material
-      // note: one geometry should have one corresponding material
-      //       if the `mtl_index` is -1, which means the OBJ file
-      //       doesn't define a seperate material for this geometry.
-      //       So we use the default material instead
-      auto  mtl_idx = geo.mtl_index < 0 ? (materials.size()-1) : geo.mtl_index;
-      auto& mtl = materials[mtl_idx];
-      OSPMaterial mtl_data = ospNewMaterial(renderer, "OBJMaterial");
-      ospSetVec3f(mtl_data, "Kd", osp::vec3f{mtl.Kd.x, mtl.Kd.y, mtl.Kd.z});
-      ospSetVec3f(mtl_data, "Ks", osp::vec3f{mtl.Ks.x, mtl.Ks.y, mtl.Ks.z});
-      ospSet1f(mtl_data, "Ns", mtl.Ns);
-      ospSet1f(mtl_data, "d",  mtl.d);	    
-      ospCommit(mtl_data);
-      ospSetMaterial(gdata, mtl_data);
-      ospRelease(mtl_data);
+      // add material
+      if (mtl != nullptr) { ospSetMaterial(gdata, mtl); }
 
-      //! commit geometry
+      // commit geometry
       ospCommit(gdata);
-
-      //! apply transform
       OSPModel local = ospNewModel(); // temporary model for affine transform
       ospAddGeometry(local, gdata);
       ospCommit(local);
       ospRelease(gdata);
 
-      //! add to global model
-      ospAddGeometry(model, ospNewInstance(local, (osp::affine3f&)transform));
+      // add to global model
+      OSPGeometry instance = ospNewInstance(local, (osp::affine3f&)transform);
+      ospCommit(instance);
+      ospAddGeometry(model, instance);
       ospRelease(local);
+
     }
   }
 }

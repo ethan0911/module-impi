@@ -23,17 +23,9 @@ class Mesh {
     std::vector<float> normal;
     std::vector<float> texcoord;
     std::vector<unsigned int> index;
-    int mtl_index = -1;
     int num_faces =  0;
     bool has_normal   = false;
     bool has_texcoord = false;
-  };
-  struct Material {
-    vec3f Kd = vec3f(0.7f); // 0.8     diffuse color
-    vec3f Ks = vec3f(0.3f); // black   specular color
-    float Ns = 99.0f; // 10 shininess (Phong exponent), usually in [2–104]
-    float d  = 1.0f;  // opaque  opacity
-    void LoadMtl(const tinyobj::material_t& tinymtl, std::string& dirpath);
   };
   struct TinyObjLoader
   {
@@ -46,13 +38,12 @@ class Mesh {
   TinyObjLoader tiny;
   /* geometric data */
   vec3f center; // mesh center coordinate in world
-  box3f bbox;  // mesh bounding box in world
+  box3f bbox;   // mesh bounding box in world
   affine3f transform;
   /* meta data */
   std::string dpath; // directory path to the mesh folder
   std::string fpath; // directory path to the mesh folder
   std::string fname; // filename of the mesh
-  std::vector<Material> materials;
   std::vector<Geometry> geometries;
  private:
   void ComputePath(const std::string& str);
@@ -72,7 +63,6 @@ class Mesh {
   }
   vec3f GetCenter() 
   {
-    center = 0.5f * (GetBBoxMax() + GetBBoxMin());
     return center;
   }
   float GetDiagonalLength() 
@@ -88,11 +78,11 @@ class Mesh {
    * \brief Overriding LoadFromFileObj function for TriMesh,
    *  force to triangulate
    */
-  bool LoadFromFileObj(const char* filename, bool loadMtl = true);
+  bool LoadFromFileObj(const char* filename, bool loadMtl = false);
   /**
    * \brief OSPRay helper     
    */
-  void AddToModel(OSPModel& model, OSPRenderer& renderer);
+  void AddToModel(OSPModel model, OSPRenderer renderer, OSPMaterial mtl = nullptr);
 };  
 
 #endif//_MESH_LOADER_H_
