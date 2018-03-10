@@ -42,6 +42,16 @@ if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
   if (HDF5_FOUND)
     include_directories(${HDF5_INCLUDE_DIRS})
   endif()
+# #  if (OPENGL_FOUND)
+#     ospray_create_library(ospray_module_impi_viewer
+#       bench/opengl/viewer.cpp
+#       bench/opengl/callback.cpp
+#       bench/opengl/global.cpp
+#       LINK
+#       ospray_imgui
+#       )
+# #  endif (OPENGL_FOUND)
+
   ospray_create_application(ospImplicitIsoSurfaceBench
     bench/impiBench.cpp
     bench/impiReader.cpp

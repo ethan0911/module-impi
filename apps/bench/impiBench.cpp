@@ -39,6 +39,7 @@ static vec3f sunDir{-1.f,0.679f,-0.754f};
 static vec3f disDir{.372f,.416f,-0.605f};
 static vec2i imgSize{1024, 768};
 static vec2i numFrames{1/* skipped */, 20/* measure */};
+static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0));
 static std::vector<vec3f> colors = {
   vec3f(0.0, 0.000, 0.563),
   vec3f(0.0, 0.000, 1.000),
@@ -167,6 +168,7 @@ int main(int ac, const char** av)
   }
 
   // setup isosurface
+  OSPModel local = ospNewModel();
   OSPGeometry iso = ospNewGeometry("impi"); 
   ospSet1f(iso, "isoValue", isoValue);
   ospSetObject(iso, "amrDataPtr", volume);
@@ -177,7 +179,10 @@ int main(int ac, const char** av)
   ospCommit(mtl);
   ospSetMaterial(iso, mtl);
   ospCommit(iso);
-  ospAddGeometry(world, iso);
+  ospAddGeometry(local, iso);
+  ospCommit(local);
+  OSPGeometry isoinstance = ospNewInstance(local, (const osp::affine3f &)Identity);
+  ospAddGeometry(world, isoinstance);
 
   // setup object
   Mesh mesh;
@@ -242,14 +247,18 @@ int main(int ac, const char** av)
   ospFrameBufferClear(fb, OSP_FB_COLOR | OSP_FB_ACCUM);
 
   // render 10 more frames, which are accumulated to result in a better converged image
+  std::cout << "#osp:bench: start warmups for " << numFrames.x << " frames" << std::endl;
   for (int frames = 0; frames < numFrames.x; frames++) {   // skip some frames to warmup
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
+  std::cout << "#osp:bench: done warmups" << std::endl;
+  std::cout << "#osp:bench: start benchmarking for " << numFrames.y << " frames" << std::endl;
   auto t = ospray::impi::Time();
   for (int frames = 0; frames < numFrames.y; frames++) {
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
   auto et = ospray::impi::Time(t);
+  std::cout << "#osp:bench: done benchmarking" << std::endl;
   std::cout << "#osp:bench: average framerate: " << numFrames.y/et << std::endl; 
 
   // save frame
