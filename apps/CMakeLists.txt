@@ -44,27 +44,21 @@ endif(OSPRAY_MODULE_IMPI_VIEWER)
 if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
   find_package(OpenGL REQUIRED)
   find_package(GLFW REQUIRED)
+  find_package(HDF5 REQUIRED)
   include_directories(
     bench/opengl/external
-    bench/opengl/external/ImGui
-    bench/opengl/external/ImGui/examples/opengl3_example
+    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/common/imgui
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src
-    ${GLFW_INCLUDE_DIR}
-    ${OPENGL_INCLUDE_DIR})
-  find_package(HDF5 REQUIRED)
-  if (HDF5_FOUND)
-    include_directories(${HDF5_INCLUDE_DIRS})
-  endif()
+    ${GLFW_INCLUDE_DIRS}
+    ${OPENGL_INCLUDE_DIR}
+    ${HDF5_INCLUDE_DIRS})
   ospray_create_application(ospImplicitIsoSurfaceWidget
     bench/impiBench.cpp
     bench/impiReader.cpp
     bench/loader/meshloader.cpp
     bench/opengl/viewer.cpp
     bench/opengl/external/glad.c
-    bench/opengl/external/ImGui/imgui.cpp
-    bench/opengl/external/ImGui/imgui_draw.cpp
-    bench/opengl/external/ImGui/imgui_demo.cpp
-    bench/opengl/external/ImGui/examples/opengl3_example/imgui_impl_glfw_gl3.cpp
+    bench/opengl/external/imgui_impl_glfw_gl3.cpp
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/TransferFunctionModule.cpp
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/common/jsoncpp.cpp
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/widgets/TransferFunctionWidget.cpp
@@ -72,12 +66,13 @@ if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
     ospray
     ospray_common
     ospray_xml
+    ospray_imgui
     ${GLFW_LIBRARIES}
     ${OPENGL_LIBRARIES}
     ${HDF5_LIBRARIES})
   set_target_properties(ospImplicitIsoSurfaceWidget
     PROPERTIES 
-    CXX_STANDARD 14
+    CXX_STANDARD 11
     COMPILE_DEFINITIONS
     USE_VIEWER=1)
 endif (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
@@ -87,9 +82,7 @@ endif (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
 ## ==================================================================== ##
 if (OSPRAY_MODULE_IMPI_BENCH_MARKER)
   find_package(HDF5 REQUIRED)
-  if (HDF5_FOUND)
-    include_directories(${HDF5_INCLUDE_DIRS})
-  endif()
+  include_directories(${HDF5_INCLUDE_DIRS})
   ospray_create_application(ospImplicitIsoSurfaceBench
     bench/impiBench.cpp
     bench/impiReader.cpp
@@ -101,7 +94,7 @@ if (OSPRAY_MODULE_IMPI_BENCH_MARKER)
     ${HDF5_LIBRARIES})
   set_target_properties(ospImplicitIsoSurfaceBench
     PROPERTIES 
-    CXX_STANDARD 14
+    CXX_STANDARD 11
     COMPILE_DEFINITIONS
     USE_VIEWER=0)
 endif (OSPRAY_MODULE_IMPI_BENCH_MARKER)
