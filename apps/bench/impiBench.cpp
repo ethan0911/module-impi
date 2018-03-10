@@ -31,8 +31,9 @@ using namespace ospcommon;
 
 static bool showVolume{false};
 static bool showObject{false};
+static enum {IMPI, NORMAL} isoMode;
 
-static float isoValue{0.0f};
+static std::vector<float> isoValues(1, 0.0f);
 static vec3f isoScale{1.f, 1.f, 1.f};
 static vec3f isoTranslate{.0f,.0f,.0f};
 
@@ -96,7 +97,24 @@ int main(int ac, const char** av)
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
     if (str == "-iso" || str == "-isoValue") {
-      ospray::impi::Parse<1>(ac, av, i, isoValue);
+      ospray::impi::Parse<1>(ac, av, i, isoValues[0]);
+    }
+    else if (str == "-isos" || str == "-isoValues") {
+      try {
+	int n = 0;
+	ospray::impi::Parse<1>(ac, av, i, n);
+	isoValues.resize(n);
+	for (int j = 0; j < n; ++j) {
+	  float v = 0.0f;
+	  ospray::impi::Parse<1>(ac, av, i, v);
+	  isoValues[j] = v;
+	}
+      } catch (const std::runtime_error& e) {
+	throw std::runtime_error(std::string(e.what())+
+				 " usage: -isos "
+				 "<# of values> "
+				 "<value list>");
+      }
     }
     else if (str == "-translate") {
       ospray::impi::Parse<3>(ac, av, i, isoTranslate);
@@ -129,13 +147,17 @@ int main(int ac, const char** av)
       showObject = true;
       inputMesh = av[++i];
     }
+    else if (str == "-use-builtin-isosurface") { 
+      isoMode = NORMAL;
+    }   
     else if (str == "-frames") {
       try {
 	ospray::impi::Parse<2>(ac, av, i, numFrames);
       } catch (const std::runtime_error& e) {
-	throw std::runtime_error
-	  (std::string(e.what())+
-	   " usage: -frames <# of warmup frames> <# of benchmark frames>");
+	throw std::runtime_error(std::string(e.what())+
+				 " usage: -frames "
+				 "<# of warmup frames> "
+				 "<# of benchmark frames>");
       }
     }
     else if (str[i] == '-') {
@@ -174,20 +196,47 @@ int main(int ac, const char** av)
     ospAddVolume(world, volume);
   }
 
-  // setup isosurface
+  // setup isosurfaces
   OSPModel local = ospNewModel();
-  OSPGeometry iso = ospNewGeometry("impi"); 
-  ospSet1f(iso, "isoValue", isoValue);
-  ospSetObject(iso, "amrDataPtr", volume);
-  OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
-  ospSetVec3f(mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
-  ospSetVec3f(mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
-  ospSet1f(mtl, "Ns", 10.f);
-  ospCommit(mtl);
-  ospSetMaterial(iso, mtl);
-  ospCommit(iso);
-  ospAddGeometry(local, iso);
+  switch (isoMode) {
+  case NORMAL:
+    // --> normal isosurface
+    {
+      OSPGeometry niso = ospNewGeometry("isosurfaces");
+      OSPData niso_values = ospNewData(isoValues.size(), OSP_FLOAT, isoValues.data());
+      ospSetData(niso, "isovalues", niso_values);
+      ospSetObject(niso, "volume", volume);
+      ospCommit(niso);
+      ospAddGeometry(local, niso);
+      ospCommit(local);    
+    }
+    break;
+  case IMPI:
+    // --> implicit isosurface
+    {
+      // Node: all isosurfaces will share one material for now
+      OSPMaterial iiso_mtl = ospNewMaterial(renderer, "OBJMaterial");
+      ospSetVec3f(iiso_mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
+      ospSetVec3f(iiso_mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
+      ospSet1f(iiso_mtl, "Ns", 10.f);
+      ospCommit(iiso_mtl);
+      // Note: because there is no naive multi-iso surface support,
+      //       we build multiple iso-geometries here
+      for (auto& v : isoValues) {
+	OSPGeometry iiso = ospNewGeometry("impi"); 
+	ospSet1f(iiso, "isoValue", v);
+	ospSetObject(iiso, "amrDataPtr", volume);
+	ospSetMaterial(iiso, iiso_mtl);
+	ospCommit(iiso);
+	ospAddGeometry(local, iiso);
+      }
+    }
+    break;
+  default:
+    throw std::runtime_error("wrong ISO-Mode, this shouldn't happen");
+  }
   ospCommit(local);
+  
   OSPGeometry isoinstance = ospNewInstance(local, (const osp::affine3f &)Identity);
   ospAddGeometry(world, isoinstance);
 
