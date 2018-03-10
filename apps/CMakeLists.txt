@@ -48,7 +48,7 @@ endif(OSPRAY_MODULE_IMPI_VIEWER)
 ## Benchmarker Widget
 ## ====================================================================== ##
 if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
-  find_package(HDF5 REQUIRED COMPONENTS C)
+  find_package(HDF5 REQUIRED)
   include_directories(
     bench/opengl/external
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/common/imgui
@@ -72,7 +72,8 @@ if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
     ospray_imgui
     ospray_imgui3d_sg
     ${OPENGL_LIBRARIES}
-    ${HDF5_LIBRARIES})
+    ${HDF5_C_LIBRARIES}
+    ${HDF5_C_HL_LIBRARIES})
   set_target_properties(ospImplicitIsoSurfaceWidget
     PROPERTIES 
     CXX_STANDARD 11
@@ -94,7 +95,8 @@ if (OSPRAY_MODULE_IMPI_BENCH_MARKER)
     ospray
     ospray_common
     ospray_xml
-    ${HDF5_LIBRARIES})
+    ${HDF5_C_LIBRARIES}
+    ${HDF5_C_HL_LIBRARIES})
   set_target_properties(ospImplicitIsoSurfaceBench
     PROPERTIES 
     CXX_STANDARD 11
