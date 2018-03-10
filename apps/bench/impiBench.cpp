@@ -23,6 +23,10 @@
 #include "impiReader.h"
 #include "loader/meshloader.h"
 
+#if USE_VIEWER
+#include "opengl/viewer.h"
+#endif
+
 using namespace ospcommon;
 
 static bool showVolume{false};
@@ -57,7 +61,10 @@ int main(int ac, const char** av)
   // Program Initialization
   //-----------------------------------------------------
   int init_error = ospInit(&ac, av);
-  
+#if USE_VIEWER
+  int window = ospray::viewer::Init(ac, av);
+#endif
+
   //-----------------------------------------------------
   // Master Rank Code (worker nodes will not reach here)
   //-----------------------------------------------------
@@ -241,6 +248,15 @@ int main(int ac, const char** av)
   ospSet1f(renderer, "epsilon", 0.001f);
   ospCommit(renderer);
 
+#if USE_VIEWER
+
+  ospray::viewer::Handler(camera);
+  ospray::viewer::Handler(transferFcn);
+  ospray::viewer::Handler(renderer);
+  ospray::viewer::Render(window);
+
+#else
+
   // setup framebuffer
   OSPFrameBuffer fb = ospNewFrameBuffer((const osp::vec2i&)imgSize, 
 					OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
@@ -265,6 +281,8 @@ int main(int ac, const char** av)
   const uint32_t * buffer = (uint32_t*)ospMapFrameBuffer(fb, OSP_FB_COLOR);
   ospray::impi::writePPM("result.ppm", imgSize.x, imgSize.y, buffer);
   ospUnmapFrameBuffer(buffer, fb);
+
+#endif
 
   // done
   std::cout << "#osp:bench: done benchmarking" << std::endl;
