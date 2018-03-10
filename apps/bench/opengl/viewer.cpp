@@ -122,7 +122,9 @@ namespace ospray {
        [&](const std::vector<float> &c, const std::vector<float> &a) {
 	 OSPData colorsData = ospNewData(c.size() / 3, OSP_FLOAT3, c.data());
 	 ospCommit(colorsData);
-	 OSPData opacitiesData = ospNewData(a.size(), OSP_FLOAT, a.data());
+	 std::vector<float>o(a.size()/2);
+	 for (int i = 0; i < a.size()/2; ++i) { o[i] = a[2*i+1]; }
+	 OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
 	 ospCommit(opacitiesData);
 	 ospSetData(ospTfn, "colors",    colorsData);
 	 ospSetData(ospTfn, "opacities", opacitiesData);
