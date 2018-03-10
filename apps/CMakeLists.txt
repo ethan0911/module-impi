@@ -24,11 +24,17 @@ ospray_disable_compiler_warnings()
 # example) get loaded through ospLoadModule(...), which will make sure
 # the module gets properly oaded on all worker nodes, even if those
 # live on different nodes, accelerator cards, memory spaces, etc.
+
+find_package(OpenGL)
+if (NOT OPENGL_FOUND) 
+  set(OSPRAY_MODULE_IMPI_VIEWER OFF)
+  set(OSPRAY_MODULE_IMPI_WIDGET OFF)
+endif ()
+
 ## ======================================================================== ##
 ## SG viewer
 ## ======================================================================== ##
 if (OSPRAY_MODULE_IMPI_VIEWER)
-  find_package(OpenGL REQUIRED)
   ospray_create_application(ospImplicitIsoSurfaceViewer
     viewer/impiViewer.cpp
     LINK
@@ -42,8 +48,7 @@ endif(OSPRAY_MODULE_IMPI_VIEWER)
 ## Benchmarker Widget
 ## ====================================================================== ##
 if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
-  find_package(OpenGL REQUIRED)
-  find_package(HDF5 REQUIRED)
+  find_package(HDF5 REQUIRED COMPONENTS C)
   include_directories(
     bench/opengl/external
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/common/imgui
