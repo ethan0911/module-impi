@@ -19,11 +19,13 @@
 # Though not actually required we guard each module 'moduleName' with
 # a OSPRAY_MODULE_MODULENAME flag that enables/disables its building.
 #
-OPTION(OSPRAY_MODULE_IMPLICIT_ISOSURFACES 
+OPTION(OSPRAY_MODULE_IMPLICIT_ISOSURFACES
   "Build module the provides implicit iso-surfaces in structured grids" ON)
-OPTION(OSPRAY_MODULE_IMPLICIT_ISOSURFACES_VIEWER 
+OPTION(OSPRAY_MODULE_IMPI_VIEWER 
   "Build the ImGui/OpenGL viewer implicit iso-surfaces" ON)
-OPTION(OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER
+OPTION(OSPRAY_MODULE_IMPI_BENCH_WIDGET
+  "Build a simple OpenGL viewer for implicit iso-surfaces" ON)
+OPTION(OSPRAY_MODULE_IMPI_BENCH_MARKER
   "Build the benchmarker for implicit iso-surfaces" ON)
 
 IF (OSPRAY_MODULE_IMPLICIT_ISOSURFACES)

@@ -24,33 +24,82 @@ ospray_disable_compiler_warnings()
 # example) get loaded through ospLoadModule(...), which will make sure
 # the module gets properly oaded on all worker nodes, even if those
 # live on different nodes, accelerator cards, memory spaces, etc.
-if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_VIEWER)
+
+find_package(OpenGL)
+if (NOT OPENGL_FOUND) 
+  set(OSPRAY_MODULE_IMPI_VIEWER OFF)
+  set(OSPRAY_MODULE_IMPI_WIDGET OFF)
+endif ()
+
+## ======================================================================== ##
+## SG viewer
+## ======================================================================== ##
+if (OSPRAY_MODULE_IMPI_VIEWER)
   ospray_create_application(ospImplicitIsoSurfaceViewer
-    impiViewer.cpp
+    viewer/impiViewer.cpp
     LINK
     ospray
     ospray_common
     ospray_imgui3d_sg
-    ospray_sg
-    ${OPENGL_LIBRARIES}
-    ${GLUT_LIBRARIES}
-    )
-endif(OSPRAY_MODULE_IMPLICIT_ISOSURFACES_VIEWER)
+    ${OPENGL_LIBRARIES})
+endif(OSPRAY_MODULE_IMPI_VIEWER)
 
-if (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
+## ====================================================================== ##
+## Benchmarker Widget
+## ====================================================================== ##
+if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
   find_package(HDF5 REQUIRED)
-  if (HDF5_FOUND)
-    include_directories(${HDF5_INCLUDE_DIRS})
-  endif()
-  ospray_create_application(ospImplicitIsoSurfaceBatch
-    impiReader.cpp
-    impiBatch.cpp
-    loader/meshloader.cpp
+  include_directories(
+    bench/opengl/external
+    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/common/imgui
+    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src
+    ${OPENGL_INCLUDE_DIR}
+    ${HDF5_INCLUDE_DIRS})
+  ospray_create_application(ospImplicitIsoSurfaceWidget
+    bench/impiBench.cpp
+    bench/impiReader.cpp
+    bench/loader/meshloader.cpp
+    bench/opengl/viewer.cpp
+    bench/opengl/external/glad.c
+    bench/opengl/external/imgui_glfw_impi.cpp
+    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/TransferFunctionModule.cpp
+    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/common/jsoncpp.cpp
+    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/widgets/TransferFunctionWidget.cpp
     LINK
     ospray
     ospray_common
     ospray_xml
-    ospray_sg
-    ${HDF5_LIBRARIES}
-    )
-endif (OSPRAY_MODULE_IMPLICIT_ISOSURFACES_BENCHMARKER)
+    ospray_imgui
+    ospray_imgui3d_sg
+    ${OPENGL_LIBRARIES}
+    ${HDF5_C_LIBRARIES}
+    ${HDF5_C_HL_LIBRARIES})
+  set_target_properties(ospImplicitIsoSurfaceWidget
+    PROPERTIES 
+    CXX_STANDARD 11
+    COMPILE_DEFINITIONS
+    USE_VIEWER=1)
+endif (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
+
+## ==================================================================== ##
+## Benchmarker
+## ==================================================================== ##
+if (OSPRAY_MODULE_IMPI_BENCH_MARKER)
+  find_package(HDF5 REQUIRED)
+  include_directories(${HDF5_INCLUDE_DIRS})
+  ospray_create_application(ospImplicitIsoSurfaceBench
+    bench/impiBench.cpp
+    bench/impiReader.cpp
+    bench/loader/meshloader.cpp
+    LINK
+    ospray
+    ospray_common
+    ospray_xml
+    ${HDF5_C_LIBRARIES}
+    ${HDF5_C_HL_LIBRARIES})
+  set_target_properties(ospImplicitIsoSurfaceBench
+    PROPERTIES 
+    CXX_STANDARD 11
+    COMPILE_DEFINITIONS
+    USE_VIEWER=0)
+endif (OSPRAY_MODULE_IMPI_BENCH_MARKER)

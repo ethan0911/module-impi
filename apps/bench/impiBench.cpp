@@ -1,6 +1,15 @@
 // ======================================================================== //
 // Copyright SCI Institute, University of Utah, 2018
 // ======================================================================== //
+// 
+// Useful Parameters
+// landingGear: 
+//    -vp 16.286070 16.446814 0.245150
+//    -vu -0.000000 -0.000000 -1.000000 
+//    -vi 16.430407 16.157639 0.353916 
+//    -scale 1 1 1 -translate 15.995 16 0.1
+//
+// ======================================================================== //
 
 #include "ospray/ospray.h"
 
@@ -12,22 +21,36 @@
 
 #include "impiHelper.h"
 #include "impiReader.h"
-//#include "loader/meshloader.h"
+#include "loader/meshloader.h"
+
+#ifdef __unix__
+# include <unistd.h>
+#endif
+
+#if USE_VIEWER
+#include "opengl/viewer.h"
+#endif
 
 using namespace ospcommon;
 
 static bool showVolume{false};
 static bool showObject{false};
-static std::string fileObject;
+static enum {IMPI, NORMAL} isoMode;
 
-static float isoValue{0.0f};
+static std::string outputImageName = "result";
+
+static std::vector<float> isoValues(1, 0.0f);
 static vec3f isoScale{1.f, 1.f, 1.f};
 static vec3f isoTranslate{.0f,.0f,.0f};
 
 static vec3f vp{43.2,44.9,-57.6};
 static vec3f vu{0,1,0};
 static vec3f vi{0,0,0};
+static vec3f sunDir{-1.f,0.679f,-0.754f};
+static vec3f disDir{.372f,.416f,-0.605f};
 static vec2i imgSize{1024, 768};
+static vec2i numFrames{1/* skipped */, 20/* measure */};
+static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0));
 static std::vector<vec3f> colors = {
   vec3f(0.0, 0.000, 0.563),
   vec3f(0.0, 0.000, 1.000),
@@ -43,9 +66,18 @@ int main(int ac, const char** av)
 {
   //-----------------------------------------------------
   // Program Initialization
-  //-----------------------------------------------------
+  //----------------------------------------------------- 
+  // check hostname
+#ifdef __unix__
+  char hname[200];
+  gethostname(hname, 200);
+  std::cout << "#osp: on host >> " << hname << "<<" << std::endl;;
+#endif
   int init_error = ospInit(&ac, av);
-  
+#if USE_VIEWER
+  int window = ospray::viewer::Init(ac, av);
+#endif
+
   //-----------------------------------------------------
   // Master Rank Code (worker nodes will not reach here)
   //-----------------------------------------------------
@@ -73,35 +105,75 @@ int main(int ac, const char** av)
   // complain about anything we do not recognize
   //-----------------------------------------------------
   std::vector<std::string> inputFiles;
+  std::string              inputMesh;
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
-    if (str == "-iso" || str == "-isoValue") {
-      ospray::impi::ParseScalar(ac, av, i, isoValue);
+    if (str == "-o") {
+      outputImageName = av[++i];
+    }    
+    else if (str == "-iso" || str == "-isoValue") {
+      ospray::impi::Parse<1>(ac, av, i, isoValues[0]);
+    }
+    else if (str == "-isos" || str == "-isoValues") {
+      try {
+	int n = 0;
+	ospray::impi::Parse<1>(ac, av, i, n);
+	isoValues.resize(n);
+	for (int j = 0; j < n; ++j) {
+	  float v = 0.0f;
+	  ospray::impi::Parse<1>(ac, av, i, v);
+	  isoValues[j] = v;
+	}
+      } catch (const std::runtime_error& e) {
+	throw std::runtime_error(std::string(e.what())+
+				 " usage: -isos "
+				 "<# of values> "
+				 "<value list>");
+      }
     }
     else if (str == "-translate") {
-      ospray::impi::ParseVec<3>(ac, av, i, isoTranslate);
+      ospray::impi::Parse<3>(ac, av, i, isoTranslate);
     }
     else if (str == "-scale") {
-      ospray::impi::ParseVec<3>(ac, av, i, isoScale);
+      ospray::impi::Parse<3>(ac, av, i, isoScale);
     }
     else if (str == "-fb") {
-      ospray::impi::ParseVec<2>(ac, av, i, imgSize);
+      ospray::impi::Parse<2>(ac, av, i, imgSize);
     }
     else if (str == "-vp") { 
-      ospray::impi::ParseVec<3>(ac, av, i, vp);
+      ospray::impi::Parse<3>(ac, av, i, vp);
     }
     else if (str == "-vi") {
-      ospray::impi::ParseVec<3>(ac, av, i, vi);
+      ospray::impi::Parse<3>(ac, av, i, vi);
     }
     else if (str == "-vu") { 
-      ospray::impi::ParseVec<3>(ac, av, i, vu);
+      ospray::impi::Parse<3>(ac, av, i, vu);
+    }    
+    else if (str == "-sun") { 
+      ospray::impi::Parse<3>(ac, av, i, sunDir);
+    }    
+    else if (str == "-dis") { 
+      ospray::impi::Parse<3>(ac, av, i, disDir);
     }    
     else if (str == "-volume") { 
       showVolume = true;
     }
     else if (str == "-object") { 
       showObject = true;
-      fileObject = av[++i];
+      inputMesh = av[++i];
+    }
+    else if (str == "-use-builtin-isosurface") { 
+      isoMode = NORMAL;
+    }   
+    else if (str == "-frames") {
+      try {
+	ospray::impi::Parse<2>(ac, av, i, numFrames);
+      } catch (const std::runtime_error& e) {
+	throw std::runtime_error(std::string(e.what())+
+				 " usage: -frames "
+				 "<# of warmup frames> "
+				 "<# of benchmark frames>");
+      }
     }
     else if (str[i] == '-') {
       throw std::runtime_error("unknown argument: " + str);
@@ -139,27 +211,58 @@ int main(int ac, const char** av)
     ospAddVolume(world, volume);
   }
 
-  // setup isosurface
-  OSPGeometry iso = ospNewGeometry("impi"); 
-  ospSet1f(iso, "isoValue", isoValue);
-  ospSetObject(iso, "amrDataPtr", volume);
-  OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
-  ospSetVec3f(mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
-  ospSetVec3f(mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
-  ospSet1f(mtl, "Ns", 10.f);
-  ospCommit(mtl);
-  ospSetMaterial(iso, mtl);
-  ospCommit(iso);
-  ospAddGeometry(world, iso);
+  // setup isosurfaces
+  OSPModel local = ospNewModel();
+  switch (isoMode) {
+  case NORMAL:
+    // --> normal isosurface
+    {
+      OSPGeometry niso = ospNewGeometry("isosurfaces");
+      OSPData niso_values = ospNewData(isoValues.size(), OSP_FLOAT, isoValues.data());
+      ospSetData(niso, "isovalues", niso_values);
+      ospSetObject(niso, "volume", volume);
+      ospCommit(niso);
+      ospAddGeometry(local, niso);
+      ospCommit(local);    
+    }
+    break;
+  case IMPI:
+    // --> implicit isosurface
+    {
+      // Node: all isosurfaces will share one material for now
+      OSPMaterial iiso_mtl = ospNewMaterial(renderer, "OBJMaterial");
+      ospSetVec3f(iiso_mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
+      ospSetVec3f(iiso_mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
+      ospSet1f(iiso_mtl, "Ns", 10.f);
+      ospCommit(iiso_mtl);
+      // Note: because there is no naive multi-iso surface support,
+      //       we build multiple iso-geometries here
+      for (auto& v : isoValues) {
+	OSPGeometry iiso = ospNewGeometry("impi"); 
+	ospSet1f(iiso, "isoValue", v);
+	ospSetObject(iiso, "amrDataPtr", volume);
+	ospSetMaterial(iiso, iiso_mtl);
+	ospCommit(iiso);
+	ospAddGeometry(local, iiso);
+      }
+    }
+    break;
+  default:
+    throw std::runtime_error("wrong ISO-Mode, this shouldn't happen");
+  }
+  ospCommit(local);
+  
+  OSPGeometry isoinstance = ospNewInstance(local, (const osp::affine3f &)Identity);
+  ospAddGeometry(world, isoinstance);
 
-  // // setup object
-  // Mesh mesh;
-  // affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
-  // if (showObject) {
-  //   mesh.LoadFromFileObj(fileObject.c_str(), false);
-  //   mesh.SetTransform(transform);
-  //   mesh.AddToModel(world, renderer);
-  // }
+  // setup object
+  Mesh mesh;
+  affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
+  if (showObject) {
+    mesh.LoadFromFileObj(inputMesh.c_str(), false);
+    mesh.SetTransform(transform);
+    mesh.AddToModel(world, renderer);
+  }
 
   // setup camera
   OSPCamera camera = ospNewCamera("perspective");
@@ -176,13 +279,13 @@ int main(int ac, const char** av)
   ospSet1f(d_light, "intensity", 0.25f);
   ospSet1f(d_light, "angularDiameter", 0.53f);
   ospSetVec3f(d_light, "color", osp::vec3f{127.f/255.f,178.f/255.f,255.f/255.f});
-  ospSetVec3f(d_light, "direction", osp::vec3f{.372f,.416f,-0.605f});
+  ospSetVec3f(d_light, "direction", (const osp::vec3f&)disDir);
   ospCommit(d_light);
   OSPLight s_light = ospNewLight(renderer, "DirectionalLight");
   ospSet1f(s_light, "intensity", 1.50f);
   ospSet1f(s_light, "angularDiameter", 0.53f);
   ospSetVec3f(s_light, "color", osp::vec3f{1.f,1.f,1.f});  
-  ospSetVec3f(s_light, "direction", osp::vec3f{-1.f,0.679f,-0.754f});
+  ospSetVec3f(s_light, "direction", (const osp::vec3f&)sunDir);
   ospCommit(s_light);
   OSPLight a_light = ospNewLight(renderer, "AmbientLight");
   ospSet1f(a_light, "intensity", 0.90f);
@@ -209,28 +312,41 @@ int main(int ac, const char** av)
   ospSet1f(renderer, "epsilon", 0.001f);
   ospCommit(renderer);
 
+#if USE_VIEWER
+
+  ospray::viewer::Handler(camera);
+  ospray::viewer::Handler(transferFcn);
+  ospray::viewer::Handler(renderer);
+  ospray::viewer::Render(window);
+
+#else
+
   // setup framebuffer
   OSPFrameBuffer fb = ospNewFrameBuffer((const osp::vec2i&)imgSize, 
 					OSP_FB_SRGBA, OSP_FB_COLOR | OSP_FB_ACCUM);
   ospFrameBufferClear(fb, OSP_FB_COLOR | OSP_FB_ACCUM);
 
-  // skip some frames to warmup
-  for (int frames = 0; frames < 1; frames++) {
+  // render 10 more frames, which are accumulated to result in a better converged image
+  std::cout << "#osp:bench: start warmups for " << numFrames.x << " frames" << std::endl;
+  for (int frames = 0; frames < numFrames.x; frames++) {   // skip some frames to warmup
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
-
-  // render 10 more frames, which are accumulated to result in a better converged image
+  std::cout << "#osp:bench: done warmups" << std::endl;
+  std::cout << "#osp:bench: start benchmarking for " << numFrames.y << " frames" << std::endl;
   auto t = ospray::impi::Time();
-  for (int frames = 0; frames < 10; frames++) {
+  for (int frames = 0; frames < numFrames.y; frames++) {
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
   auto et = ospray::impi::Time(t);
-  std::cout << "#osp:bench: framerate " << 10/et << std::endl; 
+  std::cout << "#osp:bench: done benchmarking" << std::endl;
+  std::cout << "#osp:bench: average framerate: " << numFrames.y/et << std::endl; 
 
   // save frame
   const uint32_t * buffer = (uint32_t*)ospMapFrameBuffer(fb, OSP_FB_COLOR);
-  ospray::impi::writePPM("result.ppm", imgSize.x, imgSize.y, buffer);
+  ospray::impi::writePPM(outputImageName + ".ppm", imgSize.x, imgSize.y, buffer);
   ospUnmapFrameBuffer(buffer, fb);
+
+#endif
 
   // done
   std::cout << "#osp:bench: done benchmarking" << std::endl;
