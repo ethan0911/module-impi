@@ -44,6 +44,13 @@ namespace ospray {
       fprintf(file, "\n");
       fclose(file);
     }
+    inline void writePPM(const std::string &fileName,
+			 const size_t sizex, 
+			 const size_t sizey,
+			 const uint32_t *pixel)
+    {
+      writePPM(fileName.c_str(), sizex, sizey, pixel);
+    }
 
     // timer
     typedef std::chrono::high_resolution_clock::time_point time_point;

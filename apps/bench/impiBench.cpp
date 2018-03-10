@@ -23,6 +23,10 @@
 #include "impiReader.h"
 #include "loader/meshloader.h"
 
+#ifdef __unix__
+# include <unistd.h>
+#endif
+
 #if USE_VIEWER
 #include "opengl/viewer.h"
 #endif
@@ -32,6 +36,8 @@ using namespace ospcommon;
 static bool showVolume{false};
 static bool showObject{false};
 static enum {IMPI, NORMAL} isoMode;
+
+static std::string outputImageName = "result";
 
 static std::vector<float> isoValues(1, 0.0f);
 static vec3f isoScale{1.f, 1.f, 1.f};
@@ -60,7 +66,13 @@ int main(int ac, const char** av)
 {
   //-----------------------------------------------------
   // Program Initialization
-  //-----------------------------------------------------
+  //----------------------------------------------------- 
+  // check hostname
+#ifdef __unix__
+  char hname[200];
+  gethostname(hname, 200);
+  std::cout << "#osp: on host >> " << hname << "<<" << std::endl;;
+#endif
   int init_error = ospInit(&ac, av);
 #if USE_VIEWER
   int window = ospray::viewer::Init(ac, av);
@@ -96,7 +108,10 @@ int main(int ac, const char** av)
   std::string              inputMesh;
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
-    if (str == "-iso" || str == "-isoValue") {
+    if (str == "-o") {
+      outputImageName = av[++i];
+    }    
+    else if (str == "-iso" || str == "-isoValue") {
       ospray::impi::Parse<1>(ac, av, i, isoValues[0]);
     }
     else if (str == "-isos" || str == "-isoValues") {
@@ -328,7 +343,7 @@ int main(int ac, const char** av)
 
   // save frame
   const uint32_t * buffer = (uint32_t*)ospMapFrameBuffer(fb, OSP_FB_COLOR);
-  ospray::impi::writePPM("result.ppm", imgSize.x, imgSize.y, buffer);
+  ospray::impi::writePPM(outputImageName + ".ppm", imgSize.x, imgSize.y, buffer);
   ospUnmapFrameBuffer(buffer, fb);
 
 #endif
