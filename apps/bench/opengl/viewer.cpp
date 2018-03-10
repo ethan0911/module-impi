@@ -7,7 +7,7 @@
 #include <atomic>
 
 #include <imgui.h>
-#include <imgui_impl_glfw_gl3.h>
+#include <imgui_glfw_impi.h>
 
 #include "widgets/TransferFunctionWidget.h"
 
@@ -83,7 +83,7 @@ namespace ospray {
       glfwSetWindowShouldClose(window, GL_TRUE);
     }
     if (!ImGui::GetIO().WantCaptureKeyboard) {}
-    ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods); 
+    ImGui_Impi_KeyCallback(window, key, scancode, action, mods); 
   }
 
   void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
@@ -116,7 +116,7 @@ namespace ospray {
   void RenderWindow(GLFWwindow *window)
   {
     // Init   
-    ImGui_ImplGlfwGL3_Init(window, false);
+    ImGui_Impi_Init(window, false);
     tfnWidget = std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
       ([ ]() { return 256; },
        [&](const std::vector<float> &c, const std::vector<float> &a) {
@@ -139,7 +139,7 @@ namespace ospray {
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       {
 	UploadOSPRay();
-	ImGui_ImplGlfwGL3_NewFrame();
+	ImGui_Impi_NewFrame();
 	if (tfnWidget->drawUI()) { tfnWidget->render(); };
 	ImGui::Render();
       }
@@ -149,7 +149,7 @@ namespace ospray {
     // ShutDown
     StopOSPRay();
     {
-      ImGui_ImplGlfwGL3_Shutdown();
+      ImGui_Impi_Shutdown();
     }
     glfwDestroyWindow(window);
     glfwTerminate();

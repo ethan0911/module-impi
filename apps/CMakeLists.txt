@@ -39,17 +39,15 @@ if (OSPRAY_MODULE_IMPI_VIEWER)
 endif(OSPRAY_MODULE_IMPI_VIEWER)
 
 ## ====================================================================== ##
-##
+## Benchmarker Widget
 ## ====================================================================== ##
 if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
   find_package(OpenGL REQUIRED)
-  find_package(GLFW REQUIRED)
   find_package(HDF5 REQUIRED)
   include_directories(
     bench/opengl/external
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/common/imgui
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src
-    ${GLFW_INCLUDE_DIRS}
     ${OPENGL_INCLUDE_DIR}
     ${HDF5_INCLUDE_DIRS})
   ospray_create_application(ospImplicitIsoSurfaceWidget
@@ -58,7 +56,7 @@ if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
     bench/loader/meshloader.cpp
     bench/opengl/viewer.cpp
     bench/opengl/external/glad.c
-    bench/opengl/external/imgui_impl_glfw_gl3.cpp
+    bench/opengl/external/imgui_glfw_impi.cpp
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/TransferFunctionModule.cpp
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/common/jsoncpp.cpp
     ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/widgets/TransferFunctionWidget.cpp
@@ -67,7 +65,7 @@ if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
     ospray_common
     ospray_xml
     ospray_imgui
-    ${GLFW_LIBRARIES}
+    ospray_imgui3d_sg
     ${OPENGL_LIBRARIES}
     ${HDF5_LIBRARIES})
   set_target_properties(ospImplicitIsoSurfaceWidget
