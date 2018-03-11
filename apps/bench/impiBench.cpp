@@ -60,7 +60,7 @@ static std::vector<vec3f> colors = {
   vec3f(1.0, 0.000, 0.000),
   vec3f(0.5, 0.000, 0.000),
 };
-static std::vector<float> opacities = { 0.01f, 0.01f };
+static std::vector<float> opacities = { 1.f, 1.f };
 
 int main(int ac, const char** av)
 {
@@ -226,6 +226,12 @@ int main(int ac, const char** av)
 
   // setup isosurfaces
   OSPModel local = ospNewModel();
+  // Node: all isosurfaces will share one material for now
+  OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
+  ospSetVec3f(mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
+  ospSetVec3f(mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
+  ospSet1f(mtl, "Ns", 10.f);
+  ospCommit(mtl);
   switch (isoMode) {
   case NORMAL:
     // --> normal isosurface
@@ -236,6 +242,7 @@ int main(int ac, const char** av)
 				       isoValues.data());
       ospSetData(niso, "isovalues", niso_values);
       ospSetObject(niso, "volume", volume);
+      ospSetMaterial(niso, mtl);
       ospCommit(niso);
       ospAddGeometry(local, niso);
       ospCommit(local);    
@@ -244,19 +251,13 @@ int main(int ac, const char** av)
   case IMPI:
     // --> implicit isosurface
     {
-      // Node: all isosurfaces will share one material for now
-      OSPMaterial iiso_mtl = ospNewMaterial(renderer, "OBJMaterial");
-      ospSetVec3f(iiso_mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
-      ospSetVec3f(iiso_mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
-      ospSet1f(iiso_mtl, "Ns", 10.f);
-      ospCommit(iiso_mtl);
       // Note: because there is no naive multi-iso surface support,
       //       we build multiple iso-geometries here
       for (auto& v : isoValues) {
 	OSPGeometry iiso = ospNewGeometry("impi"); 
 	ospSet1f(iiso, "isoValue", v);
 	ospSetObject(iiso, "amrDataPtr", volume);
-	ospSetMaterial(iiso, iiso_mtl);
+	ospSetMaterial(iiso, mtl);
 	ospCommit(iiso);
 	ospAddGeometry(local, iiso);
       }
@@ -278,7 +279,7 @@ int main(int ac, const char** av)
   if (showObject) {
     mesh.LoadFromFileObj(inputMesh.c_str(), false);
     mesh.SetTransform(transform);
-    mesh.AddToModel(world, renderer);
+    mesh.AddToModel(world, renderer, mtl);
   }
 
   // setup camera
@@ -326,10 +327,12 @@ int main(int ac, const char** av)
   ospSet1i(renderer, "oneSidedLighting", 1);
   ospSet1i(renderer, "maxDepth", 5);
   ospSet1i(renderer, "spp", 1);
-  ospSet1i(renderer, "aoSamples", 1);
   ospSet1i(renderer, "autoEpsilon", 1);
+  ospSet1i(renderer, "aoSamples", 1);
   ospSet1i(renderer, "aoTransparencyEnabled", 1);
+  ospSet1f(renderer, "aoDistance", 10000.0f);
   ospSet1f(renderer, "epsilon", 0.001f);
+  ospSet1f(renderer, "minContribution", 0.001f);
   ospCommit(renderer);
 
 #if USE_VIEWER
