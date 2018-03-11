@@ -37,6 +37,7 @@ namespace ospray {
 	}
       };
 
+      const ospcommon::vec2f& Range() const { return voxelRange; };
       void Load(const xml::Node &node);
       OSPVolume Create(OSPTransferFunction tfn) {
 

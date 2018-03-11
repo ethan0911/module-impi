@@ -21,6 +21,8 @@ static OSPCamera           ospCam;
 static OSPTransferFunction ospTfn;
 static OSPRenderer         ospRen;
 
+static float tfnValueRange[2] = {0.f, 1.f};
+
 namespace ospray {
 
   void RenderWindow(GLFWwindow *window);
@@ -37,7 +39,12 @@ namespace ospray {
       RenderWindow(windowmap[id]); 
     };
     void Handler(OSPCamera c) { ospCam = c; };
-    void Handler(OSPTransferFunction t) { ospTfn = t; };
+    void Handler(OSPTransferFunction t, const float& a, const float& b) 
+    { 
+      ospTfn = t; 
+      tfnValueRange[0] = a;
+      tfnValueRange[1] = b;
+    };
     void Handler(OSPRenderer r) { ospRen = r; };
   };
 
@@ -118,8 +125,10 @@ namespace ospray {
     // Init   
     ImGui_Impi_Init(window, false);
     tfnWidget = std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
-      ([ ]() { return 256; },
-       [&](const std::vector<float> &c, const std::vector<float> &a) {
+      ([&](const std::vector<float> &c, 
+	   const std::vector<float> &a,
+	   const std::array<float, 2>& r) 
+       {
 	 OSPData colorsData = ospNewData(c.size() / 3, OSP_FLOAT3, c.data());
 	 ospCommit(colorsData);
 	 std::vector<float>o(a.size()/2);
@@ -128,11 +137,13 @@ namespace ospray {
 	 ospCommit(opacitiesData);
 	 ospSetData(ospTfn, "colors",    colorsData);
 	 ospSetData(ospTfn, "opacities", opacitiesData);
+	 ospSetVec2f(ospTfn, "valueRange", osp::vec2f{r[0], r[1]});
 	 ospCommit(ospTfn);
 	 ospRelease(colorsData);
 	 ospRelease(opacitiesData);
 	 ClearOSPRay();
        });
+    tfnWidget->setDefaultRange(tfnValueRange[0], tfnValueRange[1]);
     // Start
     StartOSPRay();
     while (!glfwWindowShouldClose(window)) {

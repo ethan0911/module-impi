@@ -9,7 +9,7 @@ namespace ospray {
     int Init(const int ac, const char** av);
     void Render(int);
     void Handler(OSPCamera);
-    void Handler(OSPTransferFunction);
+    void Handler(OSPTransferFunction, const float&, const float&);
     void Handler(OSPRenderer);
   };
 };

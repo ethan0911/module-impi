@@ -36,7 +36,7 @@ using namespace ospcommon;
 static bool showVolume{false};
 static bool showObject{false};
 static enum {IMPI, NORMAL} isoMode;
-
+static std::string rendererName = "scivis";
 static std::string outputImageName = "result";
 
 static std::vector<float> isoValues(1, 0.0f);
@@ -71,7 +71,7 @@ int main(int ac, const char** av)
 #ifdef __unix__
   char hname[200];
   gethostname(hname, 200);
-  std::cout << "#osp: on host >> " << hname << "<<" << std::endl;;
+  std::cout << "#osp: on host >> " << hname << " <<" << std::endl;;
 #endif
   int init_error = ospInit(&ac, av);
 #if USE_VIEWER
@@ -110,7 +110,10 @@ int main(int ac, const char** av)
     std::string str(av[i]);
     if (str == "-o") {
       outputImageName = av[++i];
-    }    
+    }
+    else if (str == "-renderer") {
+      rendererName = av[++i];
+    }
     else if (str == "-iso" || str == "-isoValue") {
       ospray::impi::Parse<1>(ac, av, i, isoValues[0]);
     }
@@ -175,7 +178,7 @@ int main(int ac, const char** av)
 				 "<# of benchmark frames>");
       }
     }
-    else if (str[i] == '-') {
+    else if (str[0] == '-') {
       throw std::runtime_error("unknown argument: " + str);
     }
     else {
@@ -190,22 +193,32 @@ int main(int ac, const char** av)
   
   // create world and renderer
   OSPModel world = ospNewModel();
-  OSPRenderer renderer = ospNewRenderer("scivis");
+  OSPRenderer renderer = ospNewRenderer(rendererName.c_str());
+  std::cout << "#osp:bench: OSPRay renderer: " << rendererName << std::endl; 
+  if (!renderer) {
+    throw std::runtime_error("invalid renderer name: " + rendererName);
+  }
+
+  // load amr volume
+  auto amrVolume = ospray::ParseOSP::loadOSP(inputFiles[0]);
 
   // setup trasnfer function
-  OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
+  OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3,
+				  colors.data());
   ospCommit(colorsData);
-  OSPData opacitiesData = ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
+  OSPData opacitiesData = ospNewData(opacities.size(), OSP_FLOAT, 
+				     opacities.data());
   ospCommit(opacitiesData);
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
   ospSetData(transferFcn, "colors",    colorsData);
   ospSetData(transferFcn, "opacities", opacitiesData);
+  ospSetVec2f(transferFcn, "valueRange", 
+  	      (const osp::vec2f&)amrVolume->Range());
   ospCommit(transferFcn);
   ospRelease(colorsData);
   ospRelease(opacitiesData);
 
   // setup volume
-  auto amrVolume = ospray::ParseOSP::loadOSP(inputFiles[0]);
   OSPVolume volume = amrVolume->Create(transferFcn);
   if (showVolume) {
     ospAddVolume(world, volume);
@@ -218,7 +231,9 @@ int main(int ac, const char** av)
     // --> normal isosurface
     {
       OSPGeometry niso = ospNewGeometry("isosurfaces");
-      OSPData niso_values = ospNewData(isoValues.size(), OSP_FLOAT, isoValues.data());
+      OSPData niso_values = ospNewData(isoValues.size(), 
+				       OSP_FLOAT, 
+				       isoValues.data());
       ospSetData(niso, "isovalues", niso_values);
       ospSetObject(niso, "volume", volume);
       ospCommit(niso);
@@ -250,14 +265,16 @@ int main(int ac, const char** av)
   default:
     throw std::runtime_error("wrong ISO-Mode, this shouldn't happen");
   }
-  ospCommit(local);
-  
-  OSPGeometry isoinstance = ospNewInstance(local, (const osp::affine3f &)Identity);
+  ospCommit(local);  
+  OSPGeometry isoinstance = 
+    ospNewInstance(local, (const osp::affine3f &)Identity);
   ospAddGeometry(world, isoinstance);
 
   // setup object
   Mesh mesh;
-  affine3f transform = affine3f::translate(isoTranslate) * affine3f::scale(isoScale);
+  affine3f transform = 
+    affine3f::translate(isoTranslate) * 
+    affine3f::scale(isoScale);
   if (showObject) {
     mesh.LoadFromFileObj(inputMesh.c_str(), false);
     mesh.SetTransform(transform);
@@ -278,7 +295,8 @@ int main(int ac, const char** av)
   OSPLight d_light = ospNewLight(renderer, "DirectionalLight");
   ospSet1f(d_light, "intensity", 0.25f);
   ospSet1f(d_light, "angularDiameter", 0.53f);
-  ospSetVec3f(d_light, "color", osp::vec3f{127.f/255.f,178.f/255.f,255.f/255.f});
+  ospSetVec3f(d_light, "color", 
+	      osp::vec3f{127.f/255.f,178.f/255.f,255.f/255.f});
   ospSetVec3f(d_light, "direction", (const osp::vec3f&)disDir);
   ospCommit(d_light);
   OSPLight s_light = ospNewLight(renderer, "DirectionalLight");
@@ -289,15 +307,18 @@ int main(int ac, const char** av)
   ospCommit(s_light);
   OSPLight a_light = ospNewLight(renderer, "AmbientLight");
   ospSet1f(a_light, "intensity", 0.90f);
-  ospSetVec3f(a_light, "color", osp::vec3f{174.f/255.f,218.f/255.f,255.f/255.f});
+  ospSetVec3f(a_light, "color", 
+	      osp::vec3f{174.f/255.f,218.f/255.f,255.f/255.f});
   ospCommit(a_light);
   std::vector<OSPLight> light_list { a_light, d_light, s_light };
-  OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, light_list.data());
+  OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, 
+			      light_list.data());
   ospCommit(lights);
 
   // setup world & renderer
   ospCommit(world); 
-  ospSetVec3f(renderer, "bgColor", osp::vec3f{230.f/255.f, 230.f/255.f, 230.f/255.f});
+  ospSetVec3f(renderer, "bgColor", 
+	      osp::vec3f{230.f/255.f, 230.f/255.f, 230.f/255.f});
   ospSetData(renderer, "lights", lights);
   ospSetObject(renderer, "model", world);
   ospSetObject(renderer, "camera", camera);
@@ -308,14 +329,13 @@ int main(int ac, const char** av)
   ospSet1i(renderer, "aoSamples", 1);
   ospSet1i(renderer, "autoEpsilon", 1);
   ospSet1i(renderer, "aoTransparencyEnabled", 1);
-  ospSet1f(renderer, "aoDistance", 10000.f);
   ospSet1f(renderer, "epsilon", 0.001f);
   ospCommit(renderer);
 
 #if USE_VIEWER
 
   ospray::viewer::Handler(camera);
-  ospray::viewer::Handler(transferFcn);
+  ospray::viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
   ospray::viewer::Handler(renderer);
   ospray::viewer::Render(window);
 
