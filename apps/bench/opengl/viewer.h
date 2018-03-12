@@ -6,11 +6,11 @@
 
 namespace ospray {
   namespace viewer {
-    int Init(const int ac, const char** av);
+    int Init(const int ac, const char** av, const size_t& w, const size_t& h);
     void Render(int);
-    void Handler(OSPCamera);
+    void Handler(OSPCamera c, const osp::vec3f& vp, const osp::vec3f& vu, const osp::vec3f& vi);
     void Handler(OSPTransferFunction, const float&, const float&);
-    void Handler(OSPRenderer);
+    void Handler(OSPModel m, OSPRenderer r);
   };
 };
 

@@ -67,38 +67,16 @@ int main(int ac, const char** av)
   //-----------------------------------------------------
   // Program Initialization
   //----------------------------------------------------- 
-  // check hostname
 #ifdef __unix__
+  // check hostname
   char hname[200];
   gethostname(hname, 200);
   std::cout << "#osp: on host >> " << hname << " <<" << std::endl;;
 #endif
   int init_error = ospInit(&ac, av);
-#if USE_VIEWER
-  int window = ospray::viewer::Init(ac, av);
-#endif
-
   //-----------------------------------------------------
   // Master Rank Code (worker nodes will not reach here)
   //-----------------------------------------------------
-  if (init_error != OSP_NO_ERROR) {
-    std::cerr << "FATAL ERROR DURING INITIALIZATION!" << std::endl;
-    return init_error;
-  }
-  auto device = ospGetCurrentDevice();
-  if (device == nullptr) {
-    std::cerr << "FATAL ERROR DURING GETTING CURRENT DEVICE!" << std::endl;
-    return 1;
-  }
-  ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg; });
-  ospDeviceSetErrorFunc(device,
-			[](OSPError e, const char *msg) {
-			  std::cout << "OSPRAY ERROR [" << e << "]: "
-				    << msg << std::endl;
-			  std::exit(1);
-			});
-  ospDeviceCommit(device);
-  ospLoadModule("impi");
 
   //-----------------------------------------------------
   // parse the commandline;
@@ -190,7 +168,37 @@ int main(int ac, const char** av)
     for (auto& s : inputFiles) std::cout << s << std::endl;
     throw std::runtime_error("too many input file"); 
   }
-  
+
+#if USE_VIEWER
+  int window = ospray::viewer::Init(ac, av, imgSize.x, imgSize.y);
+#endif
+
+  //-----------------------------------------------------
+  // Create ospray context
+  //-----------------------------------------------------
+  if (init_error != OSP_NO_ERROR) {
+    std::cerr << "FATAL ERROR DURING INITIALIZATION!" << std::endl;
+    return init_error;
+  }
+  auto device = ospGetCurrentDevice();
+  if (device == nullptr) {
+    std::cerr << "FATAL ERROR DURING GETTING CURRENT DEVICE!" << std::endl;
+    return 1;
+  }
+  ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg; });
+  ospDeviceSetErrorFunc(device,
+			[](OSPError e, const char *msg) {
+			  std::cout << "OSPRAY ERROR [" << e << "]: "
+				    << msg << std::endl;
+			  std::exit(1);
+			});
+  ospDeviceCommit(device);
+  ospLoadModule("impi");
+
+  //-----------------------------------------------------
+  // Create ospray objects
+  //-----------------------------------------------------  
+
   // create world and renderer
   OSPModel world = ospNewModel();
   OSPRenderer renderer = ospNewRenderer(rendererName.c_str());
@@ -337,9 +345,9 @@ int main(int ac, const char** av)
 
 #if USE_VIEWER
 
-  ospray::viewer::Handler(camera);
+  ospray::viewer::Handler(camera, (const osp::vec3f&)vp, (const osp::vec3f&)vu, (const osp::vec3f&)vi);
   ospray::viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
-  ospray::viewer::Handler(renderer);
+  ospray::viewer::Handler(world, renderer);
   ospray::viewer::Render(window);
 
 #else
