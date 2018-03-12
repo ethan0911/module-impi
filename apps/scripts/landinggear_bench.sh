@@ -1,6 +1,5 @@
 #!/bin/bash
 
-IMPI_AMR_METHOD=octant \
 ./ospImplicitIsoSurfaceBench \
 /home/sci/feng/Desktop/ws/data/NASA_LandingGear_AMR/cb.osp \
 -iso 99000.0 \
