@@ -166,6 +166,10 @@ namespace ospray {
 
   void key_onhold_callback(GLFWwindow *window) {
 
+    if (ImGui::GetIO().WantCaptureKeyboard) {
+      return;
+    }
+
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {  
       /* UP: forward */
       if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
@@ -227,18 +231,20 @@ namespace ospray {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
       glfwSetWindowShouldClose(window, GL_TRUE);
     }     
-    if (key == GLFW_KEY_LEFT_ALT) {
-      StopOSPRay();
-      if (action == GLFW_PRESS) {
-	sphere.Add(ospMod);
-      } else if (action == GLFW_RELEASE) {
-	sphere.Remove(ospMod);
+    if (!ImGui::GetIO().WantCaptureKeyboard) {
+      if (key == GLFW_KEY_LEFT_ALT) {
+	StopOSPRay();
+	if (action == GLFW_PRESS) {
+	  sphere.Add(ospMod);
+	} else if (action == GLFW_RELEASE) {
+	  sphere.Remove(ospMod);
+	}
+	ClearOSPRay();
+	StartOSPRay();
       }
-      ClearOSPRay();
-      StartOSPRay();
+    } else {      
+      ImGui_Impi_KeyCallback(window, key, scancode, action, mods); 
     }
-    if (!ImGui::GetIO().WantCaptureKeyboard) {}
-    ImGui_Impi_KeyCallback(window, key, scancode, action, mods); 
   }
 
   void cursor_position_callback(GLFWwindow *window, double xpos, double ypos) {
