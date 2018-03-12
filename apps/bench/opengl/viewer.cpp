@@ -22,6 +22,10 @@ static OSPCamera           ospCam;
 static OSPTransferFunction ospTfn;
 static OSPModel            ospMod;
 static OSPRenderer         ospRen;
+static bool printTFN = false;
+
+static std::vector<float> cptr;
+static std::vector<float> aptr;
 
 //-------------------------------------------------------------------------
 //
@@ -242,6 +246,20 @@ namespace ospray {
 	ClearOSPRay();
 	StartOSPRay();
       }
+      if (key == GLFW_KEY_P && action == GLFW_PRESS) {
+	const std::vector<float> & c = cptr;
+	const std::vector<float> & a = aptr;
+	std::cout << std::endl << "static std::vector<float> colors = {" << std::endl;
+	for (int i = 0; i < c.size()/3; ++i) {
+	  std::cout << "    " << c[3 * i] << ", " << c[3 * i + 1] << ", " << c[3 * i + 2] << "," << std::endl;
+	}
+	std::cout << "};" << std::endl;
+	std::cout << "static std::vector<float> opacities = {" << std::endl;
+	for (int i = 0; i < a.size()/2; ++i) {
+	  std::cout << "    " << a[2 * i + 1] << ", " << std::endl;
+	}
+	std::cout << "};" << std::endl << std::endl;
+      }
     } else {      
       ImGui_Impi_KeyCallback(window, key, scancode, action, mods); 
     }
@@ -283,6 +301,8 @@ namespace ospray {
 	   const std::vector<float> &a,
 	   const std::array<float, 2>& r) 
        {
+	 cptr = std::vector<float>(c);
+	 aptr = std::vector<float>(a);	 
 	 OSPData colorsData = ospNewData(c.size() / 3, OSP_FLOAT3, c.data());
 	 ospCommit(colorsData);
 	 std::vector<float>o(a.size()/2);
