@@ -24,6 +24,8 @@ cat > submit-n${NN}.sh <<EOF
 #SBATCH -N ${NN}
 #SBATCH --time=4:00:00 # walltime, abbreviated by -t
 
+source /home/sci/qwu/software/gcc/source-gcc-7.1.0.sh activate
+
 export OSPRAY_THREADS=${NT}
 
 date
