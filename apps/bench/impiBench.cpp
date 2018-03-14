@@ -580,7 +580,7 @@ static std::vector<float> opacities = {
     0, 
 };
 
-static ospcommon::vec2f valueRange = osp::vec2f{0.f, -1.f};
+static ospcommon::vec2f valueRange{0.f, -1.f};
 
 int main(int ac, const char** av)
 {
