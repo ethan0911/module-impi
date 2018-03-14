@@ -2,7 +2,7 @@
 
 PREFIX=$1
 
-$PREFIX/ospImplicitIsoSurfaceBench \
+$PREFIX/ospImplicitIsoSurfaceWidget \
 /home/sci/feng/Desktop/ws/data/chombo/chombo_amr.osp \
 -iso 0.7 \
 -vp 24.684797 17.313093 -10.046009 \
@@ -10,3 +10,4 @@ $PREFIX/ospImplicitIsoSurfaceBench \
 -vi 8.000000 7.999991 7.999997 \
 -frames 50 200 \
 "${@:2}"
+

@@ -2,7 +2,7 @@
 
 PREFIX=$1
 
-$PREFIX/ospImplicitIsoSurfaceBench \
+$PREFIX/ospImplicitIsoSurfaceWidget \
 /home/sci/feng/Desktop/ws/data/NASA_LandingGear_AMR/cb.osp \
 -iso 99000.0 \
 -object ~feng/Desktop/ws/data/NASA_LandingGear_AMR/landingGear.obj \

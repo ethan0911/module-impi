@@ -3,15 +3,21 @@
 #
 # For SCI kepler (requires Intel MPI)
 #
-
+#
 # 1st argument: <# of nodes>
 # 2nd argument: <# of threads/node>
 # 3rd argument: <ospray build directory>
+#
 
-NN=$1
-NT=$2
+NN=$1 # number of nodes
+NT=$2 # number of threads per node
+
 OSPRAY_DIR=$3
+SCRIPT_DIR=$4
+
 JOBID=$(date +%s)
+echo "job id = ${JOBID}"
+
 cat > submit-n${NN}.sh <<EOF
 #!/bin/bash
 #SBATCH -n ${NN}
@@ -27,30 +33,11 @@ echo " Method octant"
 echo "----------------------------------------------"
 echo 
 IMPI_AMR_METHOD=octant \
-mpirun -np $NN ${OSPRAY_DIR}/ospImplicitIsoSurfaceBench \
-/home/sci/feng/Desktop/ws/data/chombo/chombo_amr.osp --osp:mpi \
--iso 0.7 \
--vp 24.684797 17.313093 -10.046009 \
--vu 0.000000 1.000000 0.000000 \
--vi 8.000000 7.999991 7.999997 \
--frames 50 200 \
--o octant.${JOBID}
-echo 
-echo "----------------------------------------------"
-
-echo "----------------------------------------------"
-echo " Method nearest"
-echo "----------------------------------------------"
-echo 
-IMPI_AMR_METHOD=nearest \
-mpirun -np $NN ${OSPRAY_DIR}/ospImplicitIsoSurfaceBench \
-/home/sci/feng/Desktop/ws/data/chombo/chombo_amr.osp --osp:mpi \
--iso 0.7 \
--vp 24.684797 17.313093 -10.046009 \
--vu 0.000000 1.000000 0.000000 \
--vi 8.000000 7.999991 7.999997 \
--frames 50 200 \
--o nearest.${JOBID}
+OSPRAY_AMR_METHOD=current \
+mpirun -np $NN \
+bash $SCRIPT_DIR $OSPRAY_DIR \
+-o octant.${JOBID} \
+--osp:mpi
 echo 
 echo "----------------------------------------------"
 
@@ -59,14 +46,37 @@ echo " Method current"
 echo "----------------------------------------------"
 echo 
 IMPI_AMR_METHOD=current \
-mpirun -np $NN ${OSPRAY_DIR}/ospImplicitIsoSurfaceBench \
-/home/sci/feng/Desktop/ws/data/chombo/chombo_amr.osp --osp:mpi \
--iso 0.7 \
--vp 24.684797 17.313093 -10.046009 \
--vu 0.000000 1.000000 0.000000 \
--vi 8.000000 7.999991 7.999997 \
--frames 50 200 \
--o current.${JOBID}
+OSPRAY_AMR_METHOD=current \
+mpirun -np $NN \
+bash $SCRIPT_DIR $OSPRAY_DIR \
+-o current.${JOBID} \
+--osp:mpi
+echo 
+echo "----------------------------------------------"
+
+echo "----------------------------------------------"
+echo " Method octant pt"
+echo "----------------------------------------------"
+echo 
+IMPI_AMR_METHOD=octant \
+OSPRAY_AMR_METHOD=current \
+mpirun -np $NN \
+bash $SCRIPT_DIR $OSPRAY_DIR \
+-o octant.pt.${JOBID} -renderer pt \
+--osp:mpi
+echo 
+echo "----------------------------------------------"
+
+echo "----------------------------------------------"
+echo " Method current pt"
+echo "----------------------------------------------"
+echo 
+IMPI_AMR_METHOD=current \
+OSPRAY_AMR_METHOD=current \
+mpirun -np $NN \
+bash $SCRIPT_DIR $OSPRAY_DIR \
+-o current.pt.${JOBID} -renderer pt \
+--osp:mpi
 echo 
 echo "----------------------------------------------"
 

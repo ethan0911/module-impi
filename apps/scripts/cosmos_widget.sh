@@ -2,7 +2,7 @@
 
 PREFIX=$1
 
-$PREFIX/ospImplicitIsoSurfaceBench \
+$PREFIX/ospImplicitIsoSurfaceWidget \
 /home/sci/feng/Desktop/ws/data/COSMOS_ospray/cosmos.osp \
 -iso 0.0 \
 -vp 814.398254 -54.506733 878.914001 \
