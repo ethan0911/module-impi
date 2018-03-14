@@ -580,8 +580,7 @@ static std::vector<float> opacities = {
     0, 
 };
 
-const osp::vec2f& valueRange = osp::vec2f{98280.f,99280.f};
-
+static ospcommon::vec2f valueRange = osp::vec2f{0.f, -1.f};
 
 int main(int ac, const char** av)
 {
@@ -612,6 +611,9 @@ int main(int ac, const char** av)
     }
     else if (str == "-renderer") {
       rendererName = av[++i];
+    }
+    else if (str == "-valueRange") {
+      ospray::impi::Parse<2>(ac, av, i, valueRange);
     }
     else if (str == "-iso" || str == "-isoValue") {
       ospray::impi::Parse<1>(ac, av, i, isoValues[0]);
@@ -741,8 +743,13 @@ int main(int ac, const char** av)
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
   ospSetData(transferFcn, "colors",    colorsData);
   ospSetData(transferFcn, "opacities", opacitiesData);
-  ospSetVec2f(transferFcn, "valueRange",valueRange); 
-  	      //(const osp::vec2f&)amrVolume->Range());
+  if (valueRange.x > valueRange.y) {
+    ospSetVec2f(transferFcn, "valueRange", 
+		(const osp::vec2f&)amrVolume->Range());
+  } else {
+    ospSetVec2f(transferFcn, "valueRange", 
+		(const osp::vec2f&)valueRange);
+  }
   ospCommit(transferFcn);
   ospRelease(colorsData);
   ospRelease(opacitiesData);

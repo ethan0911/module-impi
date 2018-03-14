@@ -12,5 +12,6 @@ $PREFIX/ospImplicitIsoSurfaceBench \
 -sun 0.337 0.416 -0.605 \
 -dis 0.783 -1.00 -0.086 \
 -scale 1 1 1 -translate 15.995 16 0.1 \
--frames 20 100 \
+-frames 20 100 
+-valueRange 98280.0 99280. \
 "${@:2}"
