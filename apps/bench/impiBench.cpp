@@ -593,7 +593,11 @@ int main(int ac, const char** av)
   gethostname(hname, 200);
   std::cout << "#osp: on host >> " << hname << " <<" << std::endl;;
 #endif
-  int init_error = ospInit(&ac, av);
+  if (ospInit(&ac, av) != OSP_NO_ERROR) {
+    throw std::runtime_error("FATAL ERROR DURING INITIALIZATION!");
+    return 1;
+  }
+
   //-----------------------------------------------------
   // Master Rank Code (worker nodes will not reach here)
   //-----------------------------------------------------
@@ -699,13 +703,9 @@ int main(int ac, const char** av)
   //-----------------------------------------------------
   // Create ospray context
   //-----------------------------------------------------
-  if (init_error != OSP_NO_ERROR) {
-    std::cerr << "FATAL ERROR DURING INITIALIZATION!" << std::endl;
-    return init_error;
-  }
   auto device = ospGetCurrentDevice();
   if (device == nullptr) {
-    std::cerr << "FATAL ERROR DURING GETTING CURRENT DEVICE!" << std::endl;
+    throw std::runtime_error("FATAL ERROR DURING GETTING CURRENT DEVICE!");
     return 1;
   }
   ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg; });
@@ -716,8 +716,10 @@ int main(int ac, const char** av)
 			  std::exit(1);
 			});
   ospDeviceCommit(device);
-  ospLoadModule("impi");
-
+  if (ospLoadModule("impi") != OSP_NO_ERROR) {
+    throw std::runtime_error("failed to initialize IMPI module");
+  }
+  
   //-----------------------------------------------------
   // Create ospray objects
   //-----------------------------------------------------  
