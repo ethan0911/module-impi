@@ -26,6 +26,7 @@ static bool printTFN = false;
 
 static std::vector<float> cptr;
 static std::vector<float> aptr;
+static bool tfnptr = false;
 
 //-------------------------------------------------------------------------
 //
@@ -247,18 +248,30 @@ namespace ospray {
 	StartOSPRay();
       }
       if (key == GLFW_KEY_P && action == GLFW_PRESS) {
-	const std::vector<float> & c = cptr;
-	const std::vector<float> & a = aptr;
-	std::cout << std::endl << "static std::vector<float> colors = {" << std::endl;
-	for (int i = 0; i < c.size()/3; ++i) {
-	  std::cout << "    " << c[3 * i] << ", " << c[3 * i + 1] << ", " << c[3 * i + 2] << "," << std::endl;
+	if (tfnptr) {
+	  const std::vector<float> & c = cptr;
+	  const std::vector<float> & a = aptr;
+	  std::cout << std::endl << "static std::vector<float> colors = {" << std::endl;
+	  for (int i = 0; i < c.size()/3; ++i) {
+	    std::cout << "    " << c[3 * i] << ", " << c[3 * i + 1] << ", " << c[3 * i + 2] << "," << std::endl;
+	  }
+	  std::cout << "};" << std::endl;
+	  std::cout << "static std::vector<float> opacities = {" << std::endl;
+	  for (int i = 0; i < a.size()/2; ++i) {
+	    std::cout << "    " << a[2 * i + 1] << ", " << std::endl;
+	  }
+	  std::cout << "};" << std::endl << std::endl;
 	}
-	std::cout << "};" << std::endl;
-	std::cout << "static std::vector<float> opacities = {" << std::endl;
-	for (int i = 0; i < a.size()/2; ++i) {
-	  std::cout << "    " << a[2 * i + 1] << ", " << std::endl;
-	}
-	std::cout << "};" << std::endl << std::endl;
+      }
+      else if (key == GLFW_KEY_V && action == GLFW_PRESS) {
+	const auto vi = camera.CameraFocus();
+	const auto vp = camera.CameraPos();
+	const auto vu = camera.CameraUp();
+	std::cout << std::endl 
+		  << "-vp " << vp.x << " " << vp.y << " " << vp.z << " "
+		  << "-vi " << vi.x << " " << vi.y << " " << vi.z << " "
+		  << "-vu " << vu.x << " " << vu.y << " " << vu.z << " "
+		  << std::endl;
       }
     } else {      
       ImGui_Impi_KeyCallback(window, key, scancode, action, mods); 
@@ -296,28 +309,31 @@ namespace ospray {
   {
     // Init   
     ImGui_Impi_Init(window, false);
-    tfnWidget = std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
-      ([&](const std::vector<float> &c, 
-	   const std::vector<float> &a,
-	   const std::array<float, 2>& r) 
-       {
-	 cptr = std::vector<float>(c);
-	 aptr = std::vector<float>(a);	 
-	 OSPData colorsData = ospNewData(c.size() / 3, OSP_FLOAT3, c.data());
-	 ospCommit(colorsData);
-	 std::vector<float>o(a.size()/2);
-	 for (int i = 0; i < a.size()/2; ++i) { o[i] = a[2*i+1]; }
-	 OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
-	 ospCommit(opacitiesData);
-	 ospSetData(ospTfn, "colors",    colorsData);
-	 ospSetData(ospTfn, "opacities", opacitiesData);
-	 ospSetVec2f(ospTfn, "valueRange", osp::vec2f{r[0], r[1]});
-	 ospCommit(ospTfn);
-	 ospRelease(colorsData);
-	 ospRelease(opacitiesData);
-	 ClearOSPRay();
-       });
-    tfnWidget->setDefaultRange(tfnValueRange[0], tfnValueRange[1]);
+    if (ospTfn != nullptr) {
+      tfnWidget = std::make_shared<tfn::tfn_widget::TransferFunctionWidget>
+	([&](const std::vector<float> &c, 
+	     const std::vector<float> &a,
+	     const std::array<float, 2>& r) 
+	 {
+	   tfnptr = true;	
+	   cptr = std::vector<float>(c);
+	   aptr = std::vector<float>(a);	 
+	   OSPData colorsData = ospNewData(c.size() / 3, OSP_FLOAT3, c.data());
+	   ospCommit(colorsData);
+	   std::vector<float>o(a.size()/2);
+	   for (int i = 0; i < a.size()/2; ++i) { o[i] = a[2*i+1]; }
+	   OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
+	   ospCommit(opacitiesData);
+	   ospSetData(ospTfn, "colors",    colorsData);
+	   ospSetData(ospTfn, "opacities", opacitiesData);
+	   ospSetVec2f(ospTfn, "valueRange", osp::vec2f{r[0], r[1]});
+	   ospCommit(ospTfn);
+	   ospRelease(colorsData);
+	   ospRelease(opacitiesData);
+	   ClearOSPRay();
+	 });
+      tfnWidget->setDefaultRange(tfnValueRange[0], tfnValueRange[1]);
+    }
     // Start
     StartOSPRay();
     while (!glfwWindowShouldClose(window)) {
@@ -326,7 +342,9 @@ namespace ospray {
 	key_onhold_callback(window);
 	UploadOSPRay();
 	ImGui_Impi_NewFrame();
-	if (tfnWidget->drawUI()) { tfnWidget->render(); };
+	if (ospTfn != nullptr) {
+	  if (tfnWidget->drawUI()) { tfnWidget->render(); };
+	}
 	ImGui::Render();
       }
       glfwSwapBuffers(window);

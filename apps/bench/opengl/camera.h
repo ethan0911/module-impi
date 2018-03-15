@@ -41,8 +41,16 @@ public:
   size_t CameraWidth() { return this->width; }
   size_t CameraHeight() { return this->height; }
 
-  vec3f CameraFocus() { return this->focus; }
   float CameraFocalLength() { return length(focus - eye); }
+  vec3f CameraFocus() { return this->focus; }
+  vec3f CameraPos() {
+    auto dir = -xfmVector(this->ball.Matrix().l, this->eye - this->focus);
+    auto up  =  xfmVector(this->ball.Matrix().l, this->up);
+    return (-dir + this->focus);
+  }
+  vec3f CameraUp() {
+    return xfmVector(this->ball.Matrix().l, this->up);
+  }
 
   float CameraZNear() { return this->zNear; }
   float CameraZFar() { return this->zFar; }
