@@ -780,7 +780,7 @@ int main(int ac, const char** av)
 				       isoValues.data());
       ospSetData(niso, "isovalues", niso_values);
       ospSetObject(niso, "volume", volume);
-      ospSetMaterial(niso, mtl);
+      //ospSetMaterial(niso, mtl); // see performance impact
       ospCommit(niso);
       ospAddGeometry(local, niso);
       ospCommit(local);    
@@ -795,7 +795,7 @@ int main(int ac, const char** av)
 	OSPGeometry iiso = ospNewGeometry("impi"); 
 	ospSet1f(iiso, "isoValue", v);
 	ospSetObject(iiso, "amrDataPtr", volume);
-	ospSetMaterial(iiso, mtl);
+	//ospSetMaterial(iiso, mtl); // see performance impact
 	ospCommit(iiso);
 	ospAddGeometry(local, iiso);
       }
@@ -822,7 +822,7 @@ int main(int ac, const char** av)
     ospCommit(mtlobj);
     mesh.LoadFromFileObj(inputMesh.c_str(), false);
     mesh.SetTransform(transform);
-    mesh.AddToModel(world, renderer, mtlobj);
+    mesh.AddToModel(world, renderer/*,mtlobj*/);
   }
 
   // setup camera
