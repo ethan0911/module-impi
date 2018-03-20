@@ -250,6 +250,7 @@ namespace ospray {
         bounce["direction"] = dataState.disDir;
         bounce["intensity"] = 0.25f;
 
+	std::cout<<"disDir: "<< dataState.disDir.x<<" " << dataState.disDir.y<<" "<<dataState.disDir.z<<std::endl;
         auto &ambient = lights.createChild("ambient", "AmbientLight");
         ambient["intensity"] = 0.9f;
         ambient["color"] = vec3f(174.f/255.f,218.f/255.f,255.f/255.f);
