@@ -593,7 +593,11 @@ int main(int ac, const char** av)
   gethostname(hname, 200);
   std::cout << "#osp: on host >> " << hname << " <<" << std::endl;;
 #endif
-  int init_error = ospInit(&ac, av);
+  if (ospInit(&ac, av) != OSP_NO_ERROR) {
+    throw std::runtime_error("FATAL ERROR DURING INITIALIZATION!");
+    return 1;
+  }
+
   //-----------------------------------------------------
   // Master Rank Code (worker nodes will not reach here)
   //-----------------------------------------------------
@@ -699,13 +703,9 @@ int main(int ac, const char** av)
   //-----------------------------------------------------
   // Create ospray context
   //-----------------------------------------------------
-  if (init_error != OSP_NO_ERROR) {
-    std::cerr << "FATAL ERROR DURING INITIALIZATION!" << std::endl;
-    return init_error;
-  }
   auto device = ospGetCurrentDevice();
   if (device == nullptr) {
-    std::cerr << "FATAL ERROR DURING GETTING CURRENT DEVICE!" << std::endl;
+    throw std::runtime_error("FATAL ERROR DURING GETTING CURRENT DEVICE!");
     return 1;
   }
   ospDeviceSetStatusFunc(device, [](const char *msg) { std::cout << msg; });
@@ -716,8 +716,10 @@ int main(int ac, const char** av)
 			  std::exit(1);
 			});
   ospDeviceCommit(device);
-  ospLoadModule("impi");
-
+  if (ospLoadModule("impi") != OSP_NO_ERROR) {
+    throw std::runtime_error("failed to initialize IMPI module");
+  }
+  
   //-----------------------------------------------------
   // Create ospray objects
   //-----------------------------------------------------  
@@ -778,7 +780,7 @@ int main(int ac, const char** av)
 				       isoValues.data());
       ospSetData(niso, "isovalues", niso_values);
       ospSetObject(niso, "volume", volume);
-      ospSetMaterial(niso, mtl);
+      //ospSetMaterial(niso, mtl); // see performance impact
       ospCommit(niso);
       ospAddGeometry(local, niso);
       ospCommit(local);    
@@ -793,7 +795,7 @@ int main(int ac, const char** av)
 	OSPGeometry iiso = ospNewGeometry("impi"); 
 	ospSet1f(iiso, "isoValue", v);
 	ospSetObject(iiso, "amrDataPtr", volume);
-	ospSetMaterial(iiso, mtl);
+	//ospSetMaterial(iiso, mtl); // see performance impact
 	ospCommit(iiso);
 	ospAddGeometry(local, iiso);
       }
@@ -820,7 +822,7 @@ int main(int ac, const char** av)
     ospCommit(mtlobj);
     mesh.LoadFromFileObj(inputMesh.c_str(), false);
     mesh.SetTransform(transform);
-    mesh.AddToModel(world, renderer, mtlobj);
+    mesh.AddToModel(world, renderer/*,mtlobj*/);
   }
 
   // setup camera
