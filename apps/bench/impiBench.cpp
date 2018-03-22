@@ -62,7 +62,6 @@ static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0))
 //   vec3f(0.5, 0.000, 0.000),
 // };
 // static std::vector<float> opacities = { 1.f, 1.f };
-
 static std::vector<float> colors = {
     0, 0, 0,
     0, 0.00755413, 0.0189916,
@@ -321,6 +320,7 @@ static std::vector<float> colors = {
     0.0335457, 0.00314073, 3.44669e-05,
     0.0157473, 0.00332647, 0,
 };
+
 static std::vector<float> opacities = {
     0.108614, 
     0.152417, 
@@ -500,10 +500,10 @@ static std::vector<float> opacities = {
     0.0511615, 
     0.0632249, 
     0.0752882, 
-    0.174357, 
-    0.398261, 
-    0.622165, 
-    0.846069, 
+    0.187601, 
+    0.443752, 
+    0.699902, 
+    0.67856, 
     0, 
     0, 
     0, 
@@ -532,33 +532,33 @@ static std::vector<float> opacities = {
     0.00171846, 
     0.00254095, 
     0.00336345, 
-    0.296768, 
-    0.843733, 
+    0.127564, 
+    0.358687, 
     0, 
     0, 
     0, 
     0, 
     0, 
-    0.0195247, 
-    0.0472045, 
-    0.0748843, 
-    0.102564, 
-    0.130244, 
-    0.157924, 
-    0.160632, 
-    0.00184665, 
-    0.00624679, 
-    0.0106469, 
-    0.0150471, 
-    0.0194472, 
-    0.0238474, 
-    0.0282475, 
-    0.0326476, 
-    0.0280228, 
-    0.0217319, 
-    0.0154411, 
-    0.00915018, 
-    0.00285931, 
+    0.00645445, 
+    0.0156048, 
+    0.0247551, 
+    0.0339054, 
+    0.0430558, 
+    0.0522061, 
+    0.0613564, 
+    0.0610811, 
+    0.0477716, 
+    0.034462, 
+    0.0211525, 
+    0.00784295, 
+    0.00144782, 
+    0.00497283, 
+    0.00849783, 
+    0.00572768, 
+    0, 
+    0, 
+    0, 
+    0, 
     0, 
     0, 
     0, 
@@ -579,6 +579,7 @@ static std::vector<float> opacities = {
     0, 
     0, 
 };
+
 
 static ospcommon::vec2f valueRange{0.f, -1.f};
 
@@ -822,7 +823,7 @@ int main(int ac, const char** av)
     ospCommit(mtlobj);
     mesh.LoadFromFileObj(inputMesh.c_str(), false);
     mesh.SetTransform(transform);
-    mesh.AddToModel(world, renderer/*,mtlobj*/);
+    mesh.AddToModel(world, renderer, mtlobj);
   }
 
   // setup camera
