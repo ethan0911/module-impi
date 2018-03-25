@@ -58,7 +58,7 @@ namespace ospray {
         // this->clapBoxes.push_back(b3);
 
         box3fa b1 = box3fa(wb.lower, wb.upper);
-        b1.upper.x *= 0.5f;
+        b1.upper.z *= 0.5f;
         this->clapBoxes.push_back(b1);
 
         speedtest__("Speed: ")
@@ -286,8 +286,8 @@ namespace ospray {
         std::cout<<"Filter---------------------------"<<std::endl;
 
         for (size_t i = 0; i < this->octNum; i++) {
-          auto box = box3fa(this->octVertices[i],this->octVertices[i] + vec3f(this->octWidth[i]));
-          if (octRange[i].contains(isoValue) /*&& isInClapBox(box)*/) {
+          auto box = box3fa(this->octVertices[i], this->octVertices[i] + vec3f(this->octWidth[i]));
+          if (octRange[i].contains(isoValue) && isInClapBox(box)) {
             activeVoxels.push_back(i);
           }
         }
