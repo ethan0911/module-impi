@@ -225,20 +225,8 @@ void Mesh::AddToModel(OSPModel model, OSPRenderer renderer, OSPMaterial mtl)
 
       // commit geometry
       ospCommit(gdata);
-#if 0
-      OSPModel local = ospNewModel();  // temporary model for affine transform
-      ospAddGeometry(local, gdata);
-      ospCommit(local);
-      ospRelease(gdata);
-
-      // add to global model
-      OSPGeometry instance = ospNewInstance(local, (osp::affine3f &)transform);
-      ospCommit(instance);
-      ospAddGeometry(model, instance);
-      ospRelease(local);
-#else
       ospAddGeometry(model, gdata);
-#endif
+
     }
   }
 }

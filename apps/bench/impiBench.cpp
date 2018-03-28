@@ -58,20 +58,6 @@ static vec3f disDir{.372f,.416f,-0.605f};
 static vec2i imgSize{1024, 768};
 static vec2i numFrames{1/* skipped */, 20/* measure */};
 static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0));
-
-<<<<<<< HEAD
-// static std::vector<vec3f> colors = {
-//   vec3f(0.0, 0.000, 0.563),
-//   vec3f(0.0, 0.000, 1.000),
-//   vec3f(0.0, 1.000, 1.000),
-//   vec3f(0.5, 1.000, 0.500),
-//   vec3f(1.0, 1.000, 0.000),
-//   vec3f(1.0, 0.000, 0.000),
-//   vec3f(0.5, 0.000, 0.000),
-// };
-// static std::vector<float> opacities = { 1.f, 1.f };
-=======
->>>>>>> be1d583e47fb6042e5e026de5674209212ac2a33
 static std::vector<float> colors = {
     0, 0, 0,
     0, 0.00755413, 0.0189916,
@@ -592,9 +578,8 @@ static std::vector<float> opacities = {
 
 
 OSPGeometry make_triangle() {
-	// Data for a triangle
-  //const float tri_verts[] = {-4, -4, 0, 0, -4, 4, 0, 0, 4, -4, 0, 0};
-
+  // Data for a triangle
+  // const float tri_verts[] = {-4, -4, 0, 0, -4, 4, 0, 0, 4, -4, 0, 0};
   const float tri_verts[] = {11.995, 12, 0.1, 0, 11.995, 20, 0.1, 0, 19.995, 12, 0.1, 0};
 
 	const float tri_color[] =  {
@@ -824,22 +809,6 @@ int main(int ac, const char** av)
   }
 
   // setup isosurfaces
-  OSPModel local = ospNewModel();
-<<<<<<< HEAD
-  // Node: all isosurfaces will share one material for now
-
-  // OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
-  // ospSetVec3f(mtl, "Kd", osp::vec3f{0.5f, 0.5f, 0.5f});
-  // ospSetVec3f(mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
-  // ospSet1f(mtl, "Ns", 10.f);
-
-  OSPMaterial mtl = ospNewMaterial(renderer, "ThinGlass");
-  ospSetVec3f(mtl, "attenuationColor", osp::vec3f{0.9f, 0.4f, 0.01f});
-  ospSet1f(mtl,"thickness",0.1f);
-
-  ospCommit(mtl);
-=======
->>>>>>> be1d583e47fb6042e5e026de5674209212ac2a33
   switch (isoMode) {
   case NORMAL:
     // --> normal isosurface
@@ -861,31 +830,13 @@ int main(int ac, const char** av)
       ospSetObject(niso, "volume", volume);
       ospSetMaterial(niso, nmtl); // see performance impact (x7 slower for cosmos)
       ospCommit(niso);
-      ospAddGeometry(local, niso);
-      ospCommit(local);
+      ospAddGeometry(world, niso);
     }
     break;
   case IMPI:
     // --> implicit isosurface
     {
       // Note: because there is no naive multi-iso surface support,
-
-      // //       we build multiple iso-geometries here
-      // int colorNum = 0;
-      // for (auto &v : isoValues) {
-      //   OSPGeometry iiso = ospNewGeometry("impi");
-      //   ospSet1f(iiso, "isoValue", v);
-      //   ospSetVec4f(iiso, "isoColor", isoColors[colorNum++]);  // up to three color
-      //   ospSetObject(iiso, "amrDataPtr", volume);
-      //   //ospSetMaterial(iiso, mtl); // see performance impact
-      //   ospCommit(iiso);
-      //  // ospAddGeometry(local, iiso);
-      //   ospAddGeometry(world, iiso);
-
-      //   //OSPGeometry triangle = make_triangle();
-      //   //ospAddGeometry(world, triangle);
-
-
       //       we build multiple iso-geometries here      
       for (auto& v : isoValues) {
 	std::cout << "v = " << v.v << " "
@@ -898,17 +849,17 @@ int main(int ac, const char** av)
 	  ospSet1f(v.mtl, "Ns", 10.f);
 	  ospCommit(v.mtl);
 	} else {
-	  //
+	  //----------------
 	  //v.mtl = ospNewMaterial(renderer, "ThinGlass");
 	  //ospSetVec3f(v.mtl, "attenuationColor", (const osp::vec3f&)v.c);
 	  //ospSet1f(v.mtl, "thickness", 0.1f);
-	  //
+	  //----------------
 	  //v.mtl = ospNewMaterial(renderer, "Alloy");
 	  //ospSetVec3f(v.mtl, "color", (const osp::vec3f&)v.c);
-	  //
+	  //----------------
 	  v.mtl = ospNewMaterial(renderer, "MetallicPaint");
 	  ospSetVec3f(v.mtl, "baseColor", (const osp::vec3f&)v.c);
-	  //
+	  //----------------
 	  ospCommit(v.mtl);
 	}
 	v.geo = ospNewGeometry("impi"); 
@@ -916,23 +867,17 @@ int main(int ac, const char** av)
 	ospSetObject(v.geo, "amrDataPtr", volume);
 	ospSetMaterial(v.geo, v.mtl); // see performance impact (x7 slower for cosmos)
 	ospCommit(v.geo);
-	ospAddGeometry(local, v.geo);
-	ospCommit(local);
-
+	ospAddGeometry(world, v.geo);
       }
     }
     break;
   default:
     throw std::runtime_error("wrong ISO-Mode, this shouldn't happen");
   }
-
-#if 0
-
-   ospCommit(local);  
-  OSPGeometry isoinstance = 
-    ospNewInstance(local, (const osp::affine3f &)Identity);
-  ospAddGeometry(world, isoinstance);
-#endif  
+  
+  // debugging
+  //OSPGeometry triangle = make_triangle();
+  //ospAddGeometry(world, triangle);
 
   // setup object
   Mesh mesh;
