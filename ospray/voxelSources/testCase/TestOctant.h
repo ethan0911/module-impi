@@ -13,11 +13,12 @@
 // See the License for the specific language governing permissions and      //
 // limitations under the License.                                           //
 // ======================================================================== //
+
 #include "ospcommon/range.h"
 #include "ospcommon/array3D/for_each.h"
-#include "../..//geometry/Impi.h"
-#include "ospray/volume/amr/AMRVolume.h"
-#include "ospray/volume/amr/AMRAccel.h"
+#include "volume/amr/AMRVolume.h"
+#include "volume/amr/AMRAccel.h"
+#include "../../geometry/Impi.h"
 #include <limits>
 
 namespace ospray {
@@ -28,17 +29,17 @@ namespace ospray {
       
       struct Octant
       {
-        box3f bounds;
+	//box3f bounds;
+	vec3f coordinate;
         float width;
         float vertexValue[2][2][2];
-
-        inline Range getRange() const {
-          Range range;
-          array3D::for_each(vec3i(2),[&](const vec3i idx) {
-              range.extend(vertexValue[idx.z][idx.y][idx.x]);
-            });
-          return range;
-        }
+        /* inline Range getRange() const { */
+        /*   Range range; */
+        /*   array3D::for_each(vec3i(2),[&](const vec3i idx) { */
+        /*       range.extend(vertexValue[idx.z][idx.y][idx.x]); */
+        /*     }); */
+        /*   return range; */
+        /* } */
       };
 
       /*! implements a simple (vertex-cenetred) AMR test case
@@ -47,20 +48,37 @@ namespace ospray {
        */
       struct TestOctant : public Impi::VoxelSource
       {
+      public:
+	
+	/*! constructors and distroctors */
         TestOctant();
-        ~TestOctant();
+        virtual ~TestOctant();
 
-        //void parseOctant(std::string fileName);
-        /*! create lits of *all* voxel (refs) we want to be considered for interesction */
-        virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const override;
-        
         /*! compute world-space bounds for given voxel */
         virtual box3fa getVoxelBounds(const VoxelRef voxelRef) const override;
-        
+
         /*! get full voxel - bounds and vertex values - for given voxel */
         virtual Impi::Voxel getVoxel(const VoxelRef voxelRef) const override;
+        	
+	
 
+        virtual void getActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
+				     float isoValue) const override;
         void initOctant(ospray::AMRVolume *amr);
+
+      private:
+
+	const AMRVolume *amrVolumePtr = nullptr;
+
+      private:
+	//TODO things below should be cleaned
+	
+        //void parseOctant(std::string fileName);
+        /*! create lits of *all* voxel (refs) we want to be considered for interesction */
+
+        void initOctantValue(ospray::AMRVolume *amr);
+
+
 
         void buildOctant(ospray::AMRVolume *amr);
         void buildOctantByLeaf(std::unique_ptr<ospray::amr::AMRAccel> &accel,
@@ -68,9 +86,8 @@ namespace ospray {
                                std::vector<vec3f> *outOctLowV,
                                std::vector<float> *outOctW);
 
-        void initOctantValue(ospray::AMRVolume *amr);
 
-        std::vector<Octant> octants;
+        // std::vector<Octant> octants;
 
         size_t octNum;
         std::vector<vec3f> octVertices;
@@ -81,7 +98,8 @@ namespace ospray {
 
         std::vector<box3fa> clapBoxes;
 
-        inline bool isInClapBox(box3fa& box) const{
+	
+	bool isInClapBox(box3fa& box) const {
           bool result = false;
           for(auto clapbox: clapBoxes){
             if(touchingOrOverlapping(clapbox,box)){
@@ -92,7 +110,7 @@ namespace ospray {
           return result;
         }
 
-        inline void getOctrange(size_t octID,Range* range)
+	void getOctrange(size_t octID,Range* range)
         {
           for (size_t i = 0; i < 8; i++) {
             size_t idx = octID * 8 + i;

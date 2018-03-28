@@ -52,7 +52,7 @@ namespace ospray {
       this->ispcEquivalent = ispc::Impi_create(this);
       // note we do _not_ yet do anything else here - the actual input
       // data isn't available to use until 'commit()' gets called
-      isoValue = std::numeric_limits<float>::infinity();
+      isoValue     = std::numeric_limits<float>::infinity();
       lastIsoValue = std::numeric_limits<float>::infinity();
     }
 
@@ -103,11 +103,12 @@ namespace ospray {
     
     /*! 'finalize' is what ospray calls when everything is set and
       done, and a actual user geometry has to be built */
+    // Why this will work ???
     void Impi::finalize(Model *model)
     {
       Geometry::finalize(model);
 
-      //generate list of active voxels
+      // generate list of active voxels
       if (this->lastIsoValue != isoValue) {
         voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
         this->lastIsoValue = isoValue;

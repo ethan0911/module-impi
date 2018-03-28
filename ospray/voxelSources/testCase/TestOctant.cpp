@@ -17,30 +17,175 @@
 #include "TestOctant.h"
 #include "ospcommon/tasking/parallel_for.h"
 #include "ospcommon/utility/getEnvVar.h"
-#include "time.h"
-#include <ospray/common/Data.h>
-#include "ospray/AMRVolume_ispc.h"
-#include "ospray/method_finest_ispc.h"
-#include "ospray/method_current_ispc.h"
-#include "ospray/method_octant_ispc.h"
+#include "ospray/common/Data.h"
+#include "compute_voxels_ispc.h"
+
+#include <time.h>
+#include <numeric>
 
 #ifndef speedtest__
 #define speedtest__(data)                                           \
-  for (long blockTime = NULL;                                       \
+  for (long blockTime = NULL;					    \
        (blockTime == NULL ? (blockTime = clock()) != NULL : false); \
-       printf("Calculate Time: %.9fs \n", (double)(clock() - blockTime) / CLOCKS_PER_SEC))
+       printf(data" Calculation Time: %.9fs \n",		    \
+	      (double)(clock() - blockTime) / CLOCKS_PER_SEC))
 #endif
-
+  
 namespace ospray {
   namespace impi {
     namespace testCase {
 
-      TestOctant::TestOctant(){
+      /*! constructors and distroctors */
+      TestOctant::TestOctant() {}
+      TestOctant::~TestOctant()
+      {
+        if (octValueBuffer != NULL) { delete[] octValueBuffer; }
+      }
+
+      /*! compute world-space bounds for given voxel */
+      box3fa TestOctant::getVoxelBounds(const VoxelRef voxelRef) const 
+      {
+        return box3fa(this->octVertices[voxelRef],
+		      this->octVertices[voxelRef] + 
+		      vec3f(this->octWidth[voxelRef]));
+      }
+
+      /*! get full voxel - bounds and vertex values - for given voxel */
+      Impi::Voxel TestOctant::getVoxel(const VoxelRef voxelRef) const 
+      {
+        Impi::Voxel voxel;
+        size_t startIdx = voxelRef * 8;
+        voxel.bounds = box3fa(this->octVertices[voxelRef],
+                              this->octVertices[voxelRef] + 
+			      vec3f(this->octWidth[voxelRef]));
+        voxel.vtx[0][0][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[0][0][1] = this->octValueBuffer[startIdx++];
+        voxel.vtx[0][1][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[0][1][1] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][0][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][0][1] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][1][0] = this->octValueBuffer[startIdx++];
+        voxel.vtx[1][1][1] = this->octValueBuffer[startIdx++];
+        return voxel;
+      }
+
+      /*! create lits of *all* voxel (refs) we want to be considered for
+       * interesction */
+      void TestOctant::getActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
+				       float isoValue) const
+      {
+	// 		
+	// compute number of octants first
+	//
+	const std::unique_ptr<ospray::amr::AMRAccel> &accel = 
+	  amrVolumePtr->accel;
+        const size_t nLeaf = accel->leaf.size();
+        std::vector<size_t> numOfLeafOctants(nLeaf, size_t(0));
+	speedtest__("#osp:impi: Compute Number of Octants") {
+	  tasking::parallel_for(nLeaf, [&] (size_t lid) {
+	      const ospray::amr::AMRAccel::Leaf &lf = accel->leaf[lid];
+	      const float fcw = lf.brickList[0]->cellWidth; // cell width
+	      const float hcw = 0.5f * fcw;            // half cell width
+	      const vec3f &lower = lf.bounds.lower;
+	      const vec3f &upper = lf.bounds.upper;
+	      const size_t nx = std::round((upper.x - lower.x) / hcw);
+	      const size_t ny = std::round((upper.y - lower.y) / hcw);
+	      const size_t nz = std::round((upper.z - lower.z) / hcw);
+	      // add inner cells
+	      numOfLeafOctants[lid] += 
+		(nx / size_t(2) - size_t(1)) * 
+		(ny / size_t(2) - size_t(1)) * 
+		(nz / size_t(2) - size_t(1));
+	      // bottom top boundray cells
+	      numOfLeafOctants[lid] += ny * nx * 2;
+	      // left right boundray cells
+	      numOfLeafOctants[lid] += nz * ny * 2;
+	      // front back boundary cells
+	      numOfLeafOctants[lid] += nz * nx * 2;
+	    });
+	}
+	const size_t numOfOctants = 
+	  std::accumulate(numOfLeafOctants.begin(),
+			  numOfLeafOctants.end(),
+			  size_t(0));
+	printf("#osp:impi: numOfOctants %zu\n", numOfOctants);
+        if (numOfOctants <= 0) {
+	  throw std::runtime_error("No octants are found");
+	}
+	//
+	// safty check
+	//
+	assert(numOfOctants == octNum);
+	//
+	// iterate through all voxels
+	//
+        const size_t blockSize = 1024 * 16;
+        const size_t blockNum  = this->octVertices.size() / blockSize;
+        const size_t lastBlock = this->octVertices.size() % blockSize;
+        const auto methodStringFromEnv =
+            ospcommon::utility::getEnvVar<std::string>("IMPI_AMR_METHOD");
+        const std::string method = methodStringFromEnv.value_or("octant");
+	printf("#osp:impi: method %s\n", method.c_str());
+	//
+	//
+	//
+#if 0
+        tasking::parallel_for(blockNum, [&](int blockID) {
+	    const size_t begin = size_t(blockID) * blockSize;
+	      ispc::getOctantValue_Octant(
+                amr->getIE(),
+                &octantValue[begin * 8],
+                (ispc::vec3f *)&octantSampleVetex[begin],
+                &octWidth[begin],
+                blockSize);
+        });
+
+        tasking::parallel_for(lastBlock, [&](int taskid) {
+          const size_t begin = blockNum * blockSize + taskid;
+	  ispc::getOctantValue_Octant(amr->getIE(),
+                                 &octantValue[begin * 8],
+                                 (ispc::vec3f *)&octantSampleVetex[begin],
+                                 &octWidth[begin],
+                                 1);
+        });
+
+	// ------
+#endif
+        activeVoxels.clear(); // the output
+        for (size_t i = 0; i < this->octNum; i++) {
+          auto box = box3fa(this->octVertices[i], 
+			    this->octVertices[i] + 
+			    vec3f(this->octWidth[i]));
+          if (octRange[i].contains(isoValue) && isInClapBox(box)) {
+            activeVoxels.push_back(i);
+          }
+        }
+   
+        std::cout << "#osp:impi: " 
+		  << "IsoValue = " << isoValue << " "
+		  << "Number of ActiveVoxels = "
+		  << activeVoxels.size() 
+		  << std::endl;
+	
       }
 
       void TestOctant::initOctant(ospray::AMRVolume * amr)
       {
-        assert(amr != NULL);
+	//------------------------------------------------------------------//
+	// check if voxels are valid
+	//------------------------------------------------------------------//
+        if (!amr) {
+	  throw std::runtime_error("Empty amr volume");	  
+	}
+        if (amr->accel->leaf.size() <= 0) {
+          throw std::runtime_error("AMR Volume has no leaf");
+	}
+	amrVolumePtr = amr;
+
+	//return; // Qi: hijack here
+	
+	//------------------------------------------------------------------//
+#if 1	
         std::cout << "Start to Init Octant Value" << std::endl;
         
         buildOctant(amr);
@@ -58,7 +203,7 @@ namespace ospray {
         // this->clapBoxes.push_back(b3);
 
         box3fa b1 = box3fa(wb.lower, wb.upper);
-        b1.upper.z *= 0.5f;
+        // b1.upper.z *= 0.5f;
         this->clapBoxes.push_back(b1);
 
         speedtest__("Speed: ")
@@ -69,12 +214,15 @@ namespace ospray {
           }
         }
         std::cout << "Done Init Octant Value!" << std::endl;
+#endif
       }
 
-      void TestOctant::buildOctantByLeaf(std::unique_ptr<ospray::amr::AMRAccel> &accel,
-                                         ospray::amr::AMRAccel::Leaf &lf,
-                                         std::vector<vec3f> *outOctLowV,
-                                         std::vector<float> *outOctW)
+      void 
+      TestOctant::buildOctantByLeaf(std::unique_ptr<ospray::amr::AMRAccel> 
+				    &accel,
+				    ospray::amr::AMRAccel::Leaf &lf,
+				    std::vector<vec3f> *outOctLowV,
+				    std::vector<float> *outOctW)
       {
         std::vector<vec3f> oVertice;
         std::vector<float> oWidth;
@@ -146,8 +294,8 @@ namespace ospray {
             oVertice.push_back(vec3f(fx, fy, fz));
           }
 #endif
-        *outOctLowV = oVertice;
-        *outOctW    = oWidth;
+        *outOctLowV = oVertice; // left, down, vertex
+        *outOctW    = oWidth;   // width
       }
 
       void TestOctant::buildOctant(ospray::AMRVolume *amr)
@@ -209,6 +357,7 @@ namespace ospray {
 
         PRINT(reconstMethod);
 
+	speedtest__("Speed Compute Values: ") {
         tasking::parallel_for(blockNum, [&](int blockID) {
           const size_t begin = size_t(blockID) * blockSize;
           const size_t end =
@@ -220,8 +369,8 @@ namespace ospray {
                 (ispc::vec3f *)&octantSampleVetex[begin],
                 &octWidth[begin],
                 end - begin);
-          else if (reconstMethod == "nearst")
-            ispc::getOctantValue_Nearst(
+          else if (reconstMethod == "nearest")
+            ispc::getOctantValue_Nearest(
                 amr->getIE(),
                 &octantValue[begin * 8],
                 (ispc::vec3f *)&octantSampleVetex[begin],
@@ -244,8 +393,8 @@ namespace ospray {
                                  (ispc::vec3f *)&octantSampleVetex[begin],
                                  &octWidth[begin],
                                  1);
-          else if (reconstMethod == "nearst")
-            ispc::getOctantValue_Nearst(amr->getIE(),
+          else if (reconstMethod == "nearest")
+            ispc::getOctantValue_Nearest(amr->getIE(),
                                  &octantValue[begin * 8],
                                  (ispc::vec3f *)&octantSampleVetex[begin],
                                  &octWidth[begin],
@@ -257,6 +406,7 @@ namespace ospray {
                                  &octWidth[begin],
                                  1);
         });
+	}
 
         std::cout << "Get the Value From ISPC..." << std::endl;
         this->octValueBuffer = octantValue;
@@ -272,53 +422,8 @@ namespace ospray {
                   << std::endl;
       }
 
-      TestOctant::~TestOctant()
-      {
-        if (octValueBuffer != NULL)
-          delete[] octValueBuffer;
-      }
 
-      /*! create lits of *all* voxel (refs) we want to be considered for
-       * interesction */
-      void TestOctant::getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const 
-      {
-        activeVoxels.clear();
-        std::cout<<"Filter---------------------------"<<std::endl;
 
-        for (size_t i = 0; i < this->octNum; i++) {
-          auto box = box3fa(this->octVertices[i], this->octVertices[i] + vec3f(this->octWidth[i]));
-          if (octRange[i].contains(isoValue) && isInClapBox(box)) {
-            activeVoxels.push_back(i);
-          }
-        }
-   
-        std::cout<<"IsoValue = "<<isoValue<<", ActiveVoxels ="<<activeVoxels.size()<<std::endl;
-      }
-
-      /*! compute world-space bounds for given voxel */
-      box3fa TestOctant::getVoxelBounds(const VoxelRef voxelRef) const 
-      {
-        return box3fa(this->octVertices[voxelRef],
-                              this->octVertices[voxelRef] + vec3f(this->octWidth[voxelRef]));
-      }
-
-      /*! get full voxel - bounds and vertex values - for given voxel */
-      Impi::Voxel TestOctant::getVoxel(const VoxelRef voxelRef) const 
-      {
-        Impi::Voxel voxel;
-        size_t startIdx = voxelRef * 8;
-        voxel.bounds = box3fa(this->octVertices[voxelRef],
-                              this->octVertices[voxelRef] + vec3f(this->octWidth[voxelRef]));
-        voxel.vtx[0][0][0] = this->octValueBuffer[startIdx++];
-        voxel.vtx[0][0][1] = this->octValueBuffer[startIdx++];
-        voxel.vtx[0][1][0] = this->octValueBuffer[startIdx++];
-        voxel.vtx[0][1][1] = this->octValueBuffer[startIdx++];
-        voxel.vtx[1][0][0] = this->octValueBuffer[startIdx++];
-        voxel.vtx[1][0][1] = this->octValueBuffer[startIdx++];
-        voxel.vtx[1][1][0] = this->octValueBuffer[startIdx++];
-        voxel.vtx[1][1][1] = this->octValueBuffer[startIdx++];
-        return voxel;
-      }
     }
   }
 }
