@@ -58,7 +58,7 @@ namespace ospray {
         // this->clapBoxes.push_back(b3);
 
         box3fa b1 = box3fa(wb.lower, wb.upper);
-        b1.upper.x *= 0.5f;
+        b1.upper.z *= 0.5f;
         this->clapBoxes.push_back(b1);
 
         speedtest__("Speed: ")

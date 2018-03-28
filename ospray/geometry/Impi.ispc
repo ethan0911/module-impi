@@ -62,6 +62,7 @@ struct Impi {
   Geometry   super;
 
   float isoValue;
+  vec4f isoColor;
   float *voxelArray;
   
   /*! for the case where we build an embree bvh over the hot voxels,
@@ -89,12 +90,20 @@ static void Impi_postIntersect(uniform Geometry *uniform geometry,
   dg.Ng = dg.Ns = normalize(ray.Ng);
 
   if (flags & DG_MATERIALID) {
-    dg.materialID = 0;
-    //dg.material   = self->super.materialList[0];
- 
+    dg.materialID = -1;
+    // dg.material   = self->super.materialList[0];
+  }
+  if (flags & DG_COLOR) {
+    dg.color = self->isoColor;  // make_vec4f(1.0f,0.0f,0.0f,0.5f);
+    #if 0
+    print("self->isoColor_post = [%, %, %, %]\n",
+          self->isoColor.x,
+          self->isoColor.y,
+          self->isoColor.z,
+          self->isoColor.w);
+          #endif
   }
 }
-
 
 /*! create a new ispc equivalent for the C++ class (cppEquivalent
     points back, if we ever need this. this returns a void * that the
@@ -176,7 +185,8 @@ export void Impi_finalize(void   *uniform _self,
                           uint64 *uniform activeVoxelRefs,
                           uint64  uniform numActiveVoxelRefs,
                           void   *uniform c_self,
-                          uniform float   isoValue)
+                          uniform float   isoValue,
+			uniform vec4f* uniform isoColor)
 {
   // first, typecast to our 'real' type. since ispc can't export real
   // types to c we have to pass 'self' in as a void*, and typecast
@@ -187,6 +197,10 @@ export void Impi_finalize(void   *uniform _self,
   self->isoValue   = isoValue;
   self->activeVoxelRefs = activeVoxelRefs;
   self->c_self      = c_self;
+  self->isoColor = *isoColor;
+  print("self->isoColor = [%, %, %, %]\n",
+  self->isoColor.x, self->isoColor.y, self->isoColor.z,
+  self->isoColor.w);
   
   // ... and let embree build a bvh, with 'numPatches' primitmives and
   // our function pointers for ray-prim interseciton and
@@ -196,7 +210,7 @@ export void Impi_finalize(void   *uniform _self,
   // create a new embree geometry with numpathces prims, in the model
   // that this goemetry is in.
   uint32 uniform geomID = rtcNewUserGeometry(model->embreeSceneHandle,numActiveVoxelRefs);
-  
+  self->super.geomID = geomID;
   // set 'us' as user data (this will be the first arg in intersect()
   // and computebounds() callbacks
   rtcSetUserData(model->embreeSceneHandle,geomID,self);

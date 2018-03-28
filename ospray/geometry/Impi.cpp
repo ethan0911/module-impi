@@ -72,13 +72,15 @@ namespace ospray {
       PRINT(voxelSource);
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
-        ospray::AMRVolume *amrDataPtr = 
-	  (ospray::AMRVolume *)getParamObject("amrDataPtr",nullptr);
+        ospray::AMRVolume *amrDataPtr =
+            (ospray::AMRVolume *)getParamObject("amrDataPtr", nullptr);
         std::shared_ptr<testCase::TestOctant> testOct =
-	  std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
+            std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
         testOct->initOctant(amrDataPtr);
       }
       isoValue = getParam1f("isoValue", 0.7f);
+      isoColor = getParam4f("isoColor", vec4f(1.0f));
+      PRINT(isoColor);
     }
 
     /*! ispc can't directly call virtual functions on the c++ side, so
@@ -116,7 +118,7 @@ namespace ospray {
                           (uint64_t*)&activeVoxelRefs[0],
                           activeVoxelRefs.size(),
                           (void *)this,
-                          isoValue);
+                          isoValue, (ispc::vec4f *)&isoColor);
     }
 
 
