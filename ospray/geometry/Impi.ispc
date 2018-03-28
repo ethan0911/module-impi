@@ -211,6 +211,7 @@ export void Impi_finalize(void   *uniform _self,
   // that this goemetry is in.
   uint32 uniform geomID = rtcNewUserGeometry(model->embreeSceneHandle,numActiveVoxelRefs);
   self->super.geomID = geomID;
+
   // set 'us' as user data (this will be the first arg in intersect()
   // and computebounds() callbacks
   rtcSetUserData(model->embreeSceneHandle,geomID,self);

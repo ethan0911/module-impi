@@ -39,9 +39,16 @@ static enum {IMPI, NORMAL} isoMode;
 static std::string rendererName = "scivis";
 static std::string outputImageName = "result";
 
-static std::vector<float> isoValues(1, 0.0f);
-static vec3f isoScale{1.f, 1.f, 1.f};
-static vec3f isoTranslate{.0f,.0f,.0f};
+struct ISO {
+  float v = 0.0f;
+  vec3f c = vec3f(0.5f, 0.5f, 0.5f);
+  OSPMaterial mtl;
+  OSPGeometry geo;
+};
+static std::vector<ISO> isoValues(1);
+
+static vec3f objScale{1.f, 1.f, 1.f};
+static vec3f objTranslate{.0f,.0f,.0f};
 
 static vec3f vp{43.2,44.9,-57.6};
 static vec3f vu{0,1,0};
@@ -52,6 +59,7 @@ static vec2i imgSize{1024, 768};
 static vec2i numFrames{1/* skipped */, 20/* measure */};
 static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0));
 
+<<<<<<< HEAD
 // static std::vector<vec3f> colors = {
 //   vec3f(0.0, 0.000, 0.563),
 //   vec3f(0.0, 0.000, 1.000),
@@ -62,6 +70,8 @@ static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0))
 //   vec3f(0.5, 0.000, 0.000),
 // };
 // static std::vector<float> opacities = { 1.f, 1.f };
+=======
+>>>>>>> be1d583e47fb6042e5e026de5674209212ac2a33
 static std::vector<float> colors = {
     0, 0, 0,
     0, 0.00755413, 0.0189916,
@@ -659,7 +669,7 @@ int main(int ac, const char** av)
       ospray::impi::Parse<2>(ac, av, i, valueRange);
     }
     else if (str == "-iso" || str == "-isoValue") {
-      ospray::impi::Parse<1>(ac, av, i, isoValues[0]);
+      ospray::impi::Parse<1>(ac, av, i, isoValues[0].v);
     }
     else if (str == "-isos" || str == "-isoValues") {
       try {
@@ -667,22 +677,34 @@ int main(int ac, const char** av)
 	ospray::impi::Parse<1>(ac, av, i, n);
 	isoValues.resize(n);
 	for (int j = 0; j < n; ++j) {
-	  float v = 0.0f;
-	  ospray::impi::Parse<1>(ac, av, i, v);
-	  isoValues[j] = v;
+	  ospray::impi::Parse<1>(ac, av, i, isoValues[j].v);
 	}
       } catch (const std::runtime_error& e) {
 	throw std::runtime_error(std::string(e.what())+
 				 " usage: -isos "
-				 "<# of values> "
-				 "<value list>");
+				 "<# of iso-values> "
+				 "<iso-value list>");
+      }
+    }
+    else if (str == "-isoColor") {
+      ospray::impi::Parse<3>(ac, av, i, isoValues[0].c);
+    }
+    else if (str == "-isoColors") {
+      try {
+	for (int j = 0; j < isoValues.size(); ++j) {
+	  ospray::impi::Parse<3>(ac, av, i, isoValues[j].c);
+	}
+      } catch (const std::runtime_error& e) {
+	throw std::runtime_error(std::string(e.what())+
+				 " usage: -isoColors "
+				 "<R, G, B list>");
       }
     }
     else if (str == "-translate") {
-      ospray::impi::Parse<3>(ac, av, i, isoTranslate);
+      ospray::impi::Parse<3>(ac, av, i, objTranslate);
     }
     else if (str == "-scale") {
-      ospray::impi::Parse<3>(ac, av, i, isoScale);
+      ospray::impi::Parse<3>(ac, av, i, objScale);
     }
     else if (str == "-fb") {
       ospray::impi::Parse<2>(ac, av, i, imgSize);
@@ -803,6 +825,7 @@ int main(int ac, const char** av)
 
   // setup isosurfaces
   OSPModel local = ospNewModel();
+<<<<<<< HEAD
   // Node: all isosurfaces will share one material for now
 
   // OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
@@ -815,17 +838,28 @@ int main(int ac, const char** av)
   ospSet1f(mtl,"thickness",0.1f);
 
   ospCommit(mtl);
+=======
+>>>>>>> be1d583e47fb6042e5e026de5674209212ac2a33
   switch (isoMode) {
   case NORMAL:
     // --> normal isosurface
     {
+      // Node: all isosurfaces will share one material for now
+      OSPMaterial nmtl = ospNewMaterial(renderer, "OBJMaterial");
+      ospSetVec3f(nmtl, "Kd", osp::vec3f{1.0f, 1.0f, 1.0f});
+      ospSetVec3f(nmtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
+      ospSet1f(nmtl, "Ns", 10.f);
+      ospCommit(nmtl);
+      std::vector<float> vlist(isoValues.size());
+      for (auto i = 0; i < isoValues.size(); ++i) {
+	vlist[i] = isoValues[i].v;
+      }
       OSPGeometry niso = ospNewGeometry("isosurfaces");
-      OSPData niso_values = ospNewData(isoValues.size(), 
-				       OSP_FLOAT, 
-				       isoValues.data());
+      OSPData niso_values = ospNewData(vlist.size(), OSP_FLOAT, 
+				       vlist.data());
       ospSetData(niso, "isovalues", niso_values);
       ospSetObject(niso, "volume", volume);
-      //ospSetMaterial(niso, mtl); // see performance impact
+      ospSetMaterial(niso, nmtl); // see performance impact (x7 slower for cosmos)
       ospCommit(niso);
       ospAddGeometry(local, niso);
       ospCommit(local);
@@ -835,20 +869,55 @@ int main(int ac, const char** av)
     // --> implicit isosurface
     {
       // Note: because there is no naive multi-iso surface support,
-      //       we build multiple iso-geometries here
-      int colorNum = 0;
-      for (auto &v : isoValues) {
-        OSPGeometry iiso = ospNewGeometry("impi");
-        ospSet1f(iiso, "isoValue", v);
-        ospSetVec4f(iiso, "isoColor", isoColors[colorNum++]);  // up to three color
-        ospSetObject(iiso, "amrDataPtr", volume);
-        //ospSetMaterial(iiso, mtl); // see performance impact
-        ospCommit(iiso);
-       // ospAddGeometry(local, iiso);
-        ospAddGeometry(world, iiso);
 
-        //OSPGeometry triangle = make_triangle();
-        //ospAddGeometry(world, triangle);
+      // //       we build multiple iso-geometries here
+      // int colorNum = 0;
+      // for (auto &v : isoValues) {
+      //   OSPGeometry iiso = ospNewGeometry("impi");
+      //   ospSet1f(iiso, "isoValue", v);
+      //   ospSetVec4f(iiso, "isoColor", isoColors[colorNum++]);  // up to three color
+      //   ospSetObject(iiso, "amrDataPtr", volume);
+      //   //ospSetMaterial(iiso, mtl); // see performance impact
+      //   ospCommit(iiso);
+      //  // ospAddGeometry(local, iiso);
+      //   ospAddGeometry(world, iiso);
+
+      //   //OSPGeometry triangle = make_triangle();
+      //   //ospAddGeometry(world, triangle);
+
+
+      //       we build multiple iso-geometries here      
+      for (auto& v : isoValues) {
+	std::cout << "v = " << v.v << " "
+		  << "c = " << v.c.x << " " << v.c.y << " " << v.c.z
+		  << std::endl;
+	if (rendererName == "scivis") {
+	  v.mtl = ospNewMaterial(renderer, "OBJMaterial");
+	  ospSetVec3f(v.mtl, "Kd", (const osp::vec3f&)v.c);
+	  ospSetVec3f(v.mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
+	  ospSet1f(v.mtl, "Ns", 10.f);
+	  ospCommit(v.mtl);
+	} else {
+	  //
+	  //v.mtl = ospNewMaterial(renderer, "ThinGlass");
+	  //ospSetVec3f(v.mtl, "attenuationColor", (const osp::vec3f&)v.c);
+	  //ospSet1f(v.mtl, "thickness", 0.1f);
+	  //
+	  //v.mtl = ospNewMaterial(renderer, "Alloy");
+	  //ospSetVec3f(v.mtl, "color", (const osp::vec3f&)v.c);
+	  //
+	  v.mtl = ospNewMaterial(renderer, "MetallicPaint");
+	  ospSetVec3f(v.mtl, "baseColor", (const osp::vec3f&)v.c);
+	  //
+	  ospCommit(v.mtl);
+	}
+	v.geo = ospNewGeometry("impi"); 
+	ospSet1f(v.geo, "isoValue", v.v);
+	ospSetObject(v.geo, "amrDataPtr", volume);
+	ospSetMaterial(v.geo, v.mtl); // see performance impact (x7 slower for cosmos)
+	ospCommit(v.geo);
+	ospAddGeometry(local, v.geo);
+	ospCommit(local);
 
       }
     }
@@ -868,8 +937,8 @@ int main(int ac, const char** av)
   // setup object
   Mesh mesh;
   affine3f transform = 
-    affine3f::translate(isoTranslate) * 
-    affine3f::scale(isoScale);
+    affine3f::translate(objTranslate) * 
+    affine3f::scale(objScale);
   if (showObject) {
     OSPMaterial mtlobj = ospNewMaterial(renderer, "OBJMaterial");
     ospSetVec3f(mtlobj, "Kd", osp::vec3f{3/255.f, 10/255.f, 25/255.f});
@@ -924,7 +993,7 @@ int main(int ac, const char** av)
   ospSetObject(renderer, "camera", camera);
   ospSet1i(renderer, "shadowEnabled", 1);
   ospSet1i(renderer, "oneSidedLighting", 1);
-  ospSet1i(renderer, "maxDepth", 5);
+  ospSet1i(renderer, "maxDepth", 100);
   ospSet1i(renderer, "spp", 1);
   ospSet1i(renderer, "autoEpsilon", 1);
   ospSet1i(renderer, "aoSamples", 1);
@@ -936,7 +1005,10 @@ int main(int ac, const char** av)
 
 #if USE_VIEWER
 
-  ospray::viewer::Handler(camera, (const osp::vec3f&)vp, (const osp::vec3f&)vu, (const osp::vec3f&)vi);
+  ospray::viewer::Handler(camera, 
+			  (const osp::vec3f&)vp, 
+			  (const osp::vec3f&)vu, 
+			  (const osp::vec3f&)vi);
   ospray::viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
   ospray::viewer::Handler(world, renderer);
   ospray::viewer::Render(window);
@@ -949,12 +1021,14 @@ int main(int ac, const char** av)
   ospFrameBufferClear(fb, OSP_FB_COLOR | OSP_FB_ACCUM);
 
   // render 10 more frames, which are accumulated to result in a better converged image
-  std::cout << "#osp:bench: start warmups for " << numFrames.x << " frames" << std::endl;
-  for (int frames = 0; frames < numFrames.x; frames++) {   // skip some frames to warmup
+  std::cout << "#osp:bench: start warmups for " 
+	    << numFrames.x << " frames" << std::endl;
+  for (int frames = 0; frames < numFrames.x; frames++) { // skip some frames to warmup
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);
   }
   std::cout << "#osp:bench: done warmups" << std::endl;
-  std::cout << "#osp:bench: start benchmarking for " << numFrames.y << " frames" << std::endl;
+  std::cout << "#osp:bench: start benchmarking for "
+	    << numFrames.y << " frames" << std::endl;
   auto t = ospray::impi::Time();
   for (int frames = 0; frames < numFrames.y; frames++) {
     ospRenderFrame(fb, renderer, OSP_FB_COLOR | OSP_FB_ACCUM);

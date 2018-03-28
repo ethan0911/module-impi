@@ -286,8 +286,8 @@ namespace ospray {
         std::cout<<"Filter---------------------------"<<std::endl;
 
         for (size_t i = 0; i < this->octNum; i++) {
-          auto box = box3fa(this->octVertices[i],this->octVertices[i] + vec3f(this->octWidth[i]));
-          if (octRange[i].contains(isoValue) /*&& isInClapBox(box)*/) {
+          auto box = box3fa(this->octVertices[i], this->octVertices[i] + vec3f(this->octWidth[i]));
+          if (octRange[i].contains(isoValue) && isInClapBox(box)) {
             activeVoxels.push_back(i);
           }
         }
