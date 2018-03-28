@@ -18,56 +18,9 @@
 #include "volume/amr/AMRVolume.ih"
 #include "volume/amr/DualCell.ih"
 
-// export void getVoxelCoordinate(void *uniform _self,
-// 			       uniform float *uniform resultArray,
-// 			       uniform vec3f *uniform samplePos,
-// 			       uniform float *uniform octsWidth,
-// 			       const uniform int numOct)
-// {
-
-//   // Octant method vertex array
-//   const float halfCW = 0.5f * cw;
-//   float fz, fy, fx;
-//   // add inner cells
-//   for (fz = lower.z + halfCW; fz < upper.z - halfCW; fz += cw)
-//     for (fy = lower.y + halfCW; fy < upper.y - halfCW; fy += cw)
-//       for (fx = lower.x + halfCW; fx < upper.x - halfCW; fx += cw) {
-// 	oWidth.push_back(cw);
-// 	oVertice.push_back(vec3f(fx, fy, fz));
-//       }
-//   //bottom top boundray cells
-//   for (fy = lower.y; fy < upper.y; fy += halfCW)
-//     for (fx = lower.x; fx < upper.x; fx += halfCW) {
-//       fz = lower.z;
-//       oWidth.push_back(halfCW);
-//       oVertice.push_back(vec3f(fx, fy, fz));
-//       fz = upper.z - halfCW;
-//       oWidth.push_back(halfCW);
-//       oVertice.push_back(vec3f(fx, fy, fz));
-//     }
-//   // left right boundray cells
-//   for (fz = lower.z; fz < upper.z; fz += halfCW)
-//     for (fy = lower.y; fy < upper.y; fy += halfCW) {
-//       fx = lower.x;
-//       oWidth.push_back(halfCW);
-//       oVertice.push_back(vec3f(fx, fy, fz));
-//       fx = upper.x - halfCW;
-//       oWidth.push_back(halfCW);
-//       oVertice.push_back(vec3f(fx, fy, fz));
-//     }
-//   // front back boundary cells
-//   for (fz = lower.z; fz < upper.z; fz += halfCW)
-//     for (fx = lower.x; fx < upper.x; fx += halfCW) {
-//       fy = lower.y;
-//       oWidth.push_back(halfCW);
-//       oVertice.push_back(vec3f(fx, fy, fz));
-//       fy = upper.y - halfCW;
-//       oWidth.push_back(halfCW);
-//       oVertice.push_back(vec3f(fx, fy, fz));
-//     }
-  
-// }
-
+// ======================================================================== //
+// Useful functions from AMR 
+// ======================================================================== //
 #define DBG(a)
 
 struct Octant {
@@ -85,10 +38,13 @@ struct Octant {
   vec3f vertex;
 
   //! interpolation weights
-  vec3f weights; // weight for C000 being at the CELL CENTER, and C111 being the CELL CORNER
+  vec3f weights; // weight for C000 being at the CELL CENTER, and C111 
+                 // being the CELL CORNER
   // -------------------------------------------------------
-  /* values as found the by the query. C000 is always the CELL CENTER, and C111 the CELL CORNER */
-  // the respective level (width) we require for the respective i'th octant corner
+  /* values as found the by the query. C000 is always the CELL CENTER, 
+     and C111 the CELL CORNER */
+  // the respective level (width) we require for the respective i'th octant
+  // corner
   float cornerWidth[8];
   float value[8];
 };
@@ -122,7 +78,8 @@ inline bool isCoarser(const float width, const CellRef &C)
   return width > C.width;
 }
 
-void initOctantAndDual(Octant &O, DualCell &D, const vec3f &P, const CellRef &C)
+void initOctantAndDual(Octant &O, DualCell &D, const vec3f &P, 
+		       const CellRef &C)
 {
   const float cellWidth = C.width;
   const float halfCellWidth = cellWidth * 0.5f;
@@ -178,10 +135,10 @@ inline float coarseBoundaryValue(const AMR *uniform amr,
   initDualCell(DC, P, currentWidth);
   findDualCell(amr, DC);
 
-  // int currentLevel = getCurrentLevel(amr,currentWidth);
-  // DualCell DN;
-  // initDualCell(DN,P,amr->level[currentLevel+1].cellWidth);
-  // findDualCell(amr, DN);
+  //int currentLevel = getCurrentLevel(amr,currentWidth);
+  //DualCell DN;
+  //initDualCell(DN,P,amr->level[currentLevel+1].cellWidth);
+  //findDualCell(amr, DN);
 
   DualCell DF;
   initDualCell(DF, P, *amr->finestLevel);
@@ -189,42 +146,11 @@ inline float coarseBoundaryValue(const AMR *uniform amr,
 
   float fc = 0.5f;
   float ff = 0.5f;
-  // float fn = 0.4f;
+
+  //float fn = 0.4f;
   //return fc* lerp(DC) + ff* lerp(DF); //+ fn*lerp(DN);
 
   return lerp(DC);
-
-  // int nLevel = amr->finestLevel->level + 1;
-
-  // float sumWeights  = 0.f;
-  // float sumWeighted = 0.f;
-
-  // for (uniform int i = 0; i < nLevel; i++) {
-  //   DualCell D;
-  //   initDualCell(D, P, amr->level[i]);
-  //   findDualCell(amr, D);
-  //   // for (uniform int j = 0; j < 8; j++) {
-  //   //   if (D.isLeaf[j]) {
-  //   //     vec3f C =D.cellID.pos + make_vec3f((j & 1) ? D.cellID.width: 0.f,
-  //   //                                   (j & 2) ? D.cellID.width : 0.f,
-  //   //                                   (j & 4) ? D.cellID.width : 0.f);
-  //   //     float w_x = max(1.f -abs(P.x - C.x) / D.cellID.width,0.f);
-  //   //     float w_y = max(1.f -abs(P.y - C.y) / D.cellID.width,0.f);
-  //   //     float w_z = max(1.f -abs(P.z - C.z) / D.cellID.width,0.f);
-  //   //     float w = w_x * w_y * w_z;
-  //   //     sumWeights += w;
-  //   //     sumWeighted += w * D.value[i];
-  //   //   }
-  //   // }
-  //   float w =1.f - 1.f/(i+1.f);
-  //   w = pow(w,5);;
-  //   sumWeights += w;
-  //   sumWeighted += w * lerp(D);
-  // }
-
-  // return sumWeighted/sumWeights;
-
-
 }
 
 /*! do octant method for point P, in (leaf) cell C.  having this in a
@@ -264,14 +190,18 @@ varying float doOctant(const AMR *uniform self,
       done[C001]    = true;
     } else if (isCoarser(D.actualWidth[C001],C)) {
       /* neighbor is coarser - use the neighbor */
-      needToFillFrom[C001].pos.x = O.center.x+0.5f*(C.width+D.actualWidth[C001])*O.signs.x;
+      needToFillFrom[C001].pos.x = O.center.x+
+	0.5f*(C.width+D.actualWidth[C001])*O.signs.x;
       needToFillFrom[C001].pos.y = O.center.y;
       needToFillFrom[C001].pos.z = O.center.z;
       needToFillFrom[C001].width = D.actualWidth[C001];
       done[C001] = false;
     } else {
       /*! WE are the coarser one - use fill method */
-      O.value[C001] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.center.y,O.center.z),C.width);
+      O.value[C001] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,
+							  O.center.y,
+							  O.center.z),
+					  C.width);
       coarseFilled = true;
       done[C001]    = true;
     }
@@ -285,13 +215,17 @@ varying float doOctant(const AMR *uniform self,
     } else if (isCoarser(D.actualWidth[C010],C)) {
       /* neighbor is coarser - use the neighbor */
       needToFillFrom[C010].pos.x = O.center.x;
-      needToFillFrom[C010].pos.y = O.center.y+0.5f*(C.width+D.actualWidth[C010])*O.signs.y;
+      needToFillFrom[C010].pos.y = O.center.y+
+	0.5f*(C.width+D.actualWidth[C010])*O.signs.y;
       needToFillFrom[C010].pos.z = O.center.z;
       needToFillFrom[C010].width = D.actualWidth[C010];
       done[C010] = false;
     } else {
       /*! WE are the coarser one - use fill method */
-      O.value[C010] = coarseBoundaryValue(self,make_vec3f(O.center.x,O.vertex.y,O.center.z),C.width);
+      O.value[C010] = coarseBoundaryValue(self,make_vec3f(O.center.x,
+							  O.vertex.y,
+							  O.center.z),
+					  C.width);
       coarseFilled = true;
       done[C010]    = true;
     }
@@ -306,12 +240,16 @@ varying float doOctant(const AMR *uniform self,
       /* neighbor is coarser - use the neighbor */
       needToFillFrom[C100].pos.x = O.center.x;
       needToFillFrom[C100].pos.y = O.center.y;
-      needToFillFrom[C100].pos.z = O.center.z+0.5f*(C.width+D.actualWidth[C100])*O.signs.z;
+      needToFillFrom[C100].pos.z = O.center.z+
+	0.5f*(C.width+D.actualWidth[C100])*O.signs.z;
       needToFillFrom[C100].width = D.actualWidth[C100];
       done[C100] = false;
     } else {
       /*! WE are the coarser one - use fill method */
-      O.value[C100] = coarseBoundaryValue(self,make_vec3f(O.center.x,O.center.y,O.vertex.z),C.width);
+      O.value[C100] = coarseBoundaryValue(self,make_vec3f(O.center.x,
+							  O.center.y,
+							  O.vertex.z),
+					  C.width);
       coarseFilled = true;
       done[C100]    = true;
     }
@@ -327,14 +265,17 @@ varying float doOctant(const AMR *uniform self,
      we're the coarse side to fill it */
 
   /* ----------- edge C011 ----------- */ {
-    const float maxWidth  = max(D.actualWidth[C001],D.actualWidth[C010],D.actualWidth[C011]);
-    const bool  allLeaves = (D.isLeaf[C001] & D.isLeaf[C010] & D.isLeaf[C011]);
+    const float maxWidth  = 
+      max(D.actualWidth[C001],D.actualWidth[C010],D.actualWidth[C011]);
+    const bool  allLeaves = 
+      (D.isLeaf[C001] & D.isLeaf[C010] & D.isLeaf[C011]);
     if (isCoarser(maxWidth,C)) {
       /* at least one is coarser. find coarsest, and defer to it */
       needToFillFrom[C011] = C;
       // check if C001 is closer
       if (isCoarser(D.actualWidth[C001],needToFillFrom[C011])) {
-        needToFillFrom[C011].pos.x = O.center.x+0.5f*(C.width+D.actualWidth[C001])*O.signs.x;
+        needToFillFrom[C011].pos.x = O.center.x+
+	  0.5f*(C.width+D.actualWidth[C001])*O.signs.x;
         needToFillFrom[C011].pos.y = O.center.y;
         needToFillFrom[C011].pos.z = O.center.z;
         needToFillFrom[C011].width = D.actualWidth[C001];
@@ -342,39 +283,53 @@ varying float doOctant(const AMR *uniform self,
       // check if C010 is closer
       if (isCoarser(D.actualWidth[C010],needToFillFrom[C011])) {
         needToFillFrom[C011].pos.x = O.center.x;
-        needToFillFrom[C011].pos.y = O.center.y+0.5f*(C.width+D.actualWidth[C010])*O.signs.y;
+        needToFillFrom[C011].pos.y = O.center.y+
+	  0.5f*(C.width+D.actualWidth[C010])*O.signs.y;
         needToFillFrom[C011].pos.z = O.center.z;
         needToFillFrom[C011].width = D.actualWidth[C010];
       }
       // check if C011 is closer
       if (isCoarser(D.actualWidth[C011],needToFillFrom[C011])) {
-        needToFillFrom[C011].pos.x = O.center.x+0.5f*(C.width+D.actualWidth[C011])*O.signs.x;
-        needToFillFrom[C011].pos.y = O.center.y+0.5f*(C.width+D.actualWidth[C011])*O.signs.y;
+        needToFillFrom[C011].pos.x = O.center.x+
+	  0.5f*(C.width+D.actualWidth[C011])*O.signs.x;
+        needToFillFrom[C011].pos.y = O.center.y+
+	  0.5f*(C.width+D.actualWidth[C011])*O.signs.y;
         needToFillFrom[C011].pos.z = O.center.z;
         needToFillFrom[C011].width = D.actualWidth[C011];
       }
       done[C011]    = false;
     } else if (!allLeaves) {
       /*! WE are the coarser one - use fill method */
-      O.value[C011] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.vertex.y,O.center.z),C.width);
+      O.value[C011] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,
+							  O.vertex.y,
+							  O.center.z),
+					  C.width);
       coarseFilled = true;
       done[C011]    = true;
     } else {
-      O.value[C011] = 0.25f*(C.value+D.value[C001]+D.value[C010]+D.value[C011]);
+      O.value[C011] = 0.25f*(C.value+
+			     D.value[C001]+
+			     D.value[C010]+
+			     D.value[C011]);
       done[C011]    = true;
     }
   }
 
 
   /* ----------- edge C101 ----------- */ {
-    const float maxWidth  = max(D.actualWidth[C001],D.actualWidth[C100],D.actualWidth[C101]);
-    const bool  allLeaves = (D.isLeaf[C001] & D.isLeaf[C100] & D.isLeaf[C101]);
+    const float maxWidth  = max(D.actualWidth[C001],
+				D.actualWidth[C100],
+				D.actualWidth[C101]);
+    const bool  allLeaves = (D.isLeaf[C001] & 
+			     D.isLeaf[C100] & 
+			     D.isLeaf[C101]);
     if (isCoarser(maxWidth,C)) {
       /* at least one is coarser. find coarsest, and defer to it */
       needToFillFrom[C101] = C;
       // check if C001 is closer
       if (isCoarser(D.actualWidth[C001],needToFillFrom[C101])) {
-        needToFillFrom[C101].pos.x = O.center.x+0.5f*(C.width+D.actualWidth[C001])*O.signs.x;
+        needToFillFrom[C101].pos.x = O.center.x+
+	  0.5f*(C.width+D.actualWidth[C001])*O.signs.x;
         needToFillFrom[C101].pos.y = O.center.y;
         needToFillFrom[C101].pos.z = O.center.z;
         needToFillFrom[C101].width = D.actualWidth[C001];
@@ -383,39 +338,53 @@ varying float doOctant(const AMR *uniform self,
       if (isCoarser(D.actualWidth[C100],needToFillFrom[C101])) {
         needToFillFrom[C101].pos.x = O.center.x;
         needToFillFrom[C101].pos.y = O.center.y;
-        needToFillFrom[C101].pos.z = O.center.z+0.5f*(C.width+D.actualWidth[C100])*O.signs.z;
+        needToFillFrom[C101].pos.z = O.center.z+
+	  0.5f*(C.width+D.actualWidth[C100])*O.signs.z;
         needToFillFrom[C101].width = D.actualWidth[C100];
       }
       // check if C101 is closer
       if (isCoarser(D.actualWidth[C101],needToFillFrom[C101])) {
-        needToFillFrom[C101].pos.x = O.center.x+0.5f*(C.width+D.actualWidth[C101])*O.signs.x;
+        needToFillFrom[C101].pos.x = O.center.x+
+	  0.5f*(C.width+D.actualWidth[C101])*O.signs.x;
         needToFillFrom[C101].pos.y = O.center.y;
-        needToFillFrom[C101].pos.z = O.center.z+0.5f*(C.width+D.actualWidth[C101])*O.signs.z;
+        needToFillFrom[C101].pos.z = O.center.z+
+	  0.5f*(C.width+D.actualWidth[C101])*O.signs.z;
         needToFillFrom[C101].width = D.actualWidth[C101];
       }
       done[C101]    = false;
     } else if (!allLeaves) {
       /*! WE are the coarser one - use fill method */
-      O.value[C101] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.center.y,O.vertex.z),C.width);
+      O.value[C101] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,
+							  O.center.y,
+							  O.vertex.z),
+					  C.width);
       coarseFilled = true;
       done[C101]    = true;
     } else {
-      O.value[C101] = 0.25f*(C.value+D.value[C001]+D.value[C100]+D.value[C101]);
+      O.value[C101] = 0.25f*(C.value+
+			     D.value[C001]+
+			     D.value[C100]+
+			     D.value[C101]);
       done[C101]    = true;
     }
   }
 
 
   /* ----------- edge C110 ----------- */ {
-    const float maxWidth = max(D.actualWidth[C010],D.actualWidth[C100],D.actualWidth[C110]);
-    const bool  allLeaves = (D.isLeaf[C010] & D.isLeaf[C100] & D.isLeaf[C110]);
+    const float maxWidth = max(D.actualWidth[C010],
+			       D.actualWidth[C100],
+			       D.actualWidth[C110]);
+    const bool  allLeaves = (D.isLeaf[C010] & 
+			     D.isLeaf[C100] & 
+			     D.isLeaf[C110]);
     if (isCoarser(maxWidth,C)) {
       /* at least one is coarser. find coarsest, and defer to it */
       needToFillFrom[C110] = C;
       // check if C010 is closer
       if (isCoarser(D.actualWidth[C010],needToFillFrom[C110])) {
         needToFillFrom[C110].pos.x = O.center.x;
-        needToFillFrom[C110].pos.y = O.center.y+0.5f*(C.width+D.actualWidth[C010])*O.signs.y;
+        needToFillFrom[C110].pos.y = O.center.y+
+	  0.5f*(C.width+D.actualWidth[C010])*O.signs.y;
         needToFillFrom[C110].pos.z = O.center.z;
         needToFillFrom[C110].width = D.actualWidth[C010];
       }
@@ -423,24 +392,31 @@ varying float doOctant(const AMR *uniform self,
       if (isCoarser(D.actualWidth[C100],needToFillFrom[C110])) {
         needToFillFrom[C110].pos.x = O.center.x;
         needToFillFrom[C110].pos.y = O.center.y;
-        needToFillFrom[C110].pos.z = O.center.z+0.5f*(C.width+D.actualWidth[C100])*O.signs.z;
+        needToFillFrom[C110].pos.z = O.center.z+
+	  0.5f*(C.width+D.actualWidth[C100])*O.signs.z;
         needToFillFrom[C110].width = D.actualWidth[C100];
       }
       // check if C110 is closer
       if (isCoarser(D.actualWidth[C110],needToFillFrom[C110])) {
         needToFillFrom[C110].pos.x = O.center.x;
-        needToFillFrom[C110].pos.y = O.center.y+0.5f*(C.width+D.actualWidth[C110])*O.signs.y;
-        needToFillFrom[C110].pos.z = O.center.z+0.5f*(C.width+D.actualWidth[C110])*O.signs.z;
+        needToFillFrom[C110].pos.y = O.center.y+
+	  0.5f*(C.width+D.actualWidth[C110])*O.signs.y;
+        needToFillFrom[C110].pos.z = O.center.z+
+	  0.5f*(C.width+D.actualWidth[C110])*O.signs.z;
         needToFillFrom[C110].width = D.actualWidth[C110];
       }
       done[C110]    = false;
     } else if (!allLeaves) {
       /*! WE are the coarser one - use fill method */
-      O.value[C110] = coarseBoundaryValue(self,make_vec3f(O.center.x,O.vertex.y,O.vertex.z),C.width);
+      O.value[C110] = coarseBoundaryValue(self,make_vec3f(O.center.x,
+							  O.vertex.y,
+							  O.vertex.z),
+					  C.width);
       done[C110]    = true;
       coarseFilled = true;
     } else {
-      O.value[C110] = 0.25f*(C.value+D.value[C010]+D.value[C100]+D.value[C110]);
+      O.value[C110] = 0.25f*(C.value+D.value[C010]+
+			     D.value[C100]+D.value[C110]);
       done[C110]    = true;
     }
   }
@@ -453,10 +429,13 @@ varying float doOctant(const AMR *uniform self,
      boundary but are the coarsest, so can backfill */
 
   /* ----------- vertex ----------- */ {
-    const float maxWidth = max(D.actualWidth[0],D.actualWidth[1],D.actualWidth[2],D.actualWidth[3],
-                               D.actualWidth[4],D.actualWidth[5],D.actualWidth[6],D.actualWidth[7]);
-    const bool allLeaves = (D.isLeaf[0] & D.isLeaf[1] & D.isLeaf[2] & D.isLeaf[3] &
-                            D.isLeaf[4] & D.isLeaf[5] & D.isLeaf[6] & D.isLeaf[7]);
+    const float maxWidth = max(D.actualWidth[0],D.actualWidth[1],
+			       D.actualWidth[2],D.actualWidth[3],
+                               D.actualWidth[4],D.actualWidth[5],
+			       D.actualWidth[6],D.actualWidth[7]);
+    const bool allLeaves = (D.isLeaf[0] & D.isLeaf[1] & D.isLeaf[2] & 
+			    D.isLeaf[3] & D.isLeaf[4] & D.isLeaf[5] & 
+			    D.isLeaf[6] & D.isLeaf[7]);
     if ((maxWidth == C.width) && allLeaves) {
       /* all on same level. average, and done */
       O.value[C111] = 0.125f*(D.value[0]+D.value[1]+D.value[2]+D.value[3]+
@@ -484,8 +463,12 @@ varying float doOctant(const AMR *uniform self,
       }
       done[C111]    = false;
     } else {
-      /* none is coarser, but at least one is finer. boundary fill this vertex */
-      O.value[C111] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.vertex.y,O.vertex.z),C.width);
+      /* none is coarser, but at least one is finer. boundary fill this 
+	 vertex */
+      O.value[C111] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,
+							  O.vertex.y,
+							  O.vertex.z),
+					  C.width);
       done[C111]    = true;
       coarseFilled = true;
     }
@@ -564,15 +547,155 @@ varying float AMR_nearest(void *uniform _self, const varying vec3f &P)
   return C.value;
 }
 
-export void getOctantValue_Octant(void *uniform _self,
-                           uniform float *uniform resultArray,
-                           uniform vec3f *uniform samplePos,
-                           uniform float *uniform octsWidth,
-                           const uniform int numOct)
+// ======================================================================== //
+// Codes to compute voxel values
+// ======================================================================== //
+
+export void getVoxel_Octant(void *uniform _self,
+			    uniform vec3f *uniform resultCoord,
+			    uniform float *uniform resultWidth,
+			    uniform float *uniform resultValue,
+			    const uniform float &cw,
+			    const uniform vec3f &lower,
+			    const uniform vec3f &upper,
+			    const uniform uint32 b,   // begin
+			    const uniform uint32 e,   // end
+			    const uniform uint32 nx,
+			    const uniform uint32 ny,
+			    const uniform uint32 nz,
+			    // different type of cells
+			    const uniform uint32 n1,
+			    const uniform uint32 n2,
+			    const uniform uint32 n3)
+{
+  //
+  // NOTE: definitions of nx, ny, nz are here
+  //const size_t nx = std::round((upper.x - lower.x) * s);
+  //const size_t ny = std::round((upper.y - lower.y) * s);
+  //const size_t nz = std::round((upper.z - lower.z) * s);
+  //
+  AMRVolume *uniform self = (AMRVolume * uniform) _self;
+  // so here we need to compute the point position from index
+  const uniform float halfCW = 0.5f * cw;
+  foreach (i = b ... e) {    
+    //
+    // compute width and coordinate
+    //
+    float oW; // width
+    vec3f oC; // vertex coordinates
+    /* add inner cells */
+    if (i < n1) { 
+      // for (fz = lower.z + halfCW; fz < upper.z - halfCW; fz += cw)
+      // for (fy = lower.y + halfCW; fy < upper.y - halfCW; fy += cw)
+      // for (fx = lower.x + halfCW; fx < upper.x - halfCW; fx += cw) {
+      //   oWidth.push_back(cw);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      // }
+      const uint32 ix = i % (nx - 1);
+      const uint32 iy = (i % ((ny - 1) * (nx - 1))) / (nx - 1);
+      const uint32 iz = i / ((ny - 1) * (nx - 1));
+      oW = cw;
+      oC.x = lower.x + halfCW + cw * ix;
+      oC.y = lower.y + halfCW + cw * iy;
+      oC.z = lower.z + halfCW + cw * iz;
+    }
+    /* bottom top boundray cells */
+    else if (i < n2) { 
+      // for (fy = lower.y; fy < upper.y; fy += halfCW)
+      // for (fx = lower.x; fx < upper.x; fx += halfCW) {
+      //   fz = lower.z;
+      //   oWidth.push_back(halfCW);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      //   fz = upper.z - halfCW;
+      //   oWidth.push_back(halfCW);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      // }
+      const uint32 ix = ((i - n1) % (4 * nx)) / 2;
+      const uint32 iy = (i - n1) / (4 * nx);
+      oW = halfCW;
+      oC.x = lower.x + halfCW * ix;
+      oC.y = lower.y + halfCW * iy;
+      if ((i-n1) % 2 == 0) {
+	oC.z = lower.z;
+      } else {
+	oC.z = upper.z - halfCW;
+      }      
+    } 
+    /* left right boundray cells */
+    else if (i < n3) { 
+      // for (fz = lower.z; fz < upper.z; fz += halfCW)
+      // for (fy = lower.y; fy < upper.y; fy += halfCW) {
+      //   fx = lower.x;
+      //   oWidth.push_back(halfCW);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      //   fx = upper.x - halfCW;
+      //   oWidth.push_back(halfCW);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      // }
+      const uint32 iy = ((i - n2) % (4 * ny)) / 2;
+      const uint32 iz = (i - n2) / (4 * ny);
+      oW = halfCW;
+      oC.y = lower.y + halfCW * iy;
+      oC.z = lower.z + halfCW * iz;
+      if ((i-n2) % 2 == 0) {
+	oC.x = lower.x;
+      } else {
+	oC.x = upper.x - halfCW;
+      }
+    } 
+    /* front back boundary cells */
+    else { 
+      // for (fz = lower.z; fz < upper.z; fz += halfCW)
+      // for (fx = lower.x; fx < upper.x; fx += halfCW) {
+      //   fy = lower.y;
+      //   oWidth.push_back(halfCW);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      //   fy = upper.y - halfCW;
+      //   oWidth.push_back(halfCW);
+      //   oVertice.push_back(vec3f(fx, fy, fz));
+      // }
+      const uint32 ix = ((i - n3) % (4 * nx)) / 2;
+      const uint32 iz = (i - n3) / (4 * nx);
+      oW = halfCW;
+      oC.x = lower.x + halfCW * ix;
+      oC.z = lower.z + halfCW * iz;
+      if ((i-n3) % 2 == 0) {
+	oC.y = lower.y;
+      } else {
+	oC.y = upper.y - halfCW;
+      }           
+    }
+ 
+    //
+    // now we compute voxel value
+    //
+    resultCoord[i].x = oC.x;
+    resultCoord[i].y = oC.y;
+    resultCoord[i].z = oC.z;
+    resultWidth[i] = oW;
+    float oV[8];
+    for (uint32 j = 0; j < 8; j++) {
+      const vec3f vtxPos = make_vec3f((j & 1) ? oW : 0.f,
+                                      (j & 2) ? oW : 0.f,
+                                      (j & 4) ? oW : 0.f);
+      vec3f pos = oC + vtxPos;
+      // hard code octant method here
+      oV[j] = AMR_octant(self, pos);
+      // test
+      resultValue[i * 8 + j] = oV[j];
+    }
+  }
+}
+
+export void getAMRValue_Octant(void *uniform _self,
+			       uniform float *uniform resultArray,
+			       uniform vec3f *uniform samplePos,
+			       uniform float *uniform octsWidth,
+			       const uniform int numOct)
 {
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
-  foreach (i = 0 ... numOct) {
-    for (uniform int j = 0; j < 8; j++) {
+  for(uniform int i = 0; i < numOct; i++) {
+    foreach (j = 0 ... 8) {
       const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
                                       (j & 2) ? octsWidth[i] : 0.f,
                                       (j & 4) ? octsWidth[i] : 0.f);
@@ -583,15 +706,15 @@ export void getOctantValue_Octant(void *uniform _self,
   }
 }
 
-export void getOctantValue_Current(void *uniform _self,
-                           uniform float *uniform resultArray,
-                           uniform vec3f *uniform samplePos,
-                           uniform float *uniform octsWidth,
-                           const uniform int numOct)
+export void getAMRValue_Current(void *uniform _self,
+				uniform float *uniform resultArray,
+				uniform vec3f *uniform samplePos,
+				uniform float *uniform octsWidth,
+				const uniform int numOct)
 {
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
-  foreach (i = 0 ... numOct) {
-    for (uniform int j = 0; j < 8; j++) {
+  for(uniform int i = 0; i < numOct; i++) {
+    foreach (j = 0 ... 8) {
       const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
                                       (j & 2) ? octsWidth[i] : 0.f,
                                       (j & 4) ? octsWidth[i] : 0.f);
@@ -602,20 +725,20 @@ export void getOctantValue_Current(void *uniform _self,
   }
 }
 
-export void getOctantValue_Nearest(void *uniform _self,
-                           uniform float *uniform resultArray,
-                           uniform vec3f *uniform samplePos,
-                           uniform float *uniform octsWidth,
-                           const uniform int numOct)
+export void getAMRValue_Nearest(void *uniform _self,
+				uniform float *uniform resultArray,
+				uniform vec3f *uniform samplePos,
+				uniform float *uniform octsWidth,
+				const uniform int numOct)
 {
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
-  foreach (i = 0 ... numOct) {
-    for (uniform int j = 0; j < 8; j++) {
+  for(uniform int i = 0; i < numOct; i++) {
+    foreach (j = 0 ... 8) {
       const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
                                       (j & 2) ? octsWidth[i] : 0.f,
                                       (j & 4) ? octsWidth[i] : 0.f);
       vec3f pos          = samplePos[i] + vtxPos;
-      int idx = i*8 + j;
+      int idx = i * 8 + j;
       resultArray[idx] = AMR_nearest(self, pos);
     }
   }

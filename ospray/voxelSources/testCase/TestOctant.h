@@ -28,11 +28,13 @@ namespace ospray {
       typedef ospcommon::range_t<float> Range;
       
       struct Octant
-      {
-	//box3f bounds;
-	vec3f coordinate;
-        float width;
-        float vertexValue[2][2][2];
+      {	
+	box3f bounds;
+	Impi::Voxel voxel;
+
+	//vec3f coordinate;
+        //float width;
+        //float vertexValue[2][2][2];
         /* inline Range getRange() const { */
         /*   Range range; */
         /*   array3D::for_each(vec3i(2),[&](const vec3i idx) { */
@@ -44,8 +46,8 @@ namespace ospray {
 
       /*! implements a simple (vertex-cenetred) AMR test case
           consisting of a 2x2x2-cell base level in which one of the
-          cells is refined infilterActiveVoxelsto another 2x2x2-cell finer level
-       */
+          cells is refined infilterActiveVoxelsto another 2x2x2-cell
+	  finer level */
       struct TestOctant : public Impi::VoxelSource
       {
       public:
@@ -61,13 +63,16 @@ namespace ospray {
         virtual Impi::Voxel getVoxel(const VoxelRef voxelRef) const override;
         	
 	
-
+	/*! compute active voxels (called in Impi.cpp file) */
         virtual void getActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
 				     float isoValue) const override;
+
+	/*! initialization */
         void initOctant(ospray::AMRVolume *amr);
 
       private:
 
+        std::vector<Octant> octants; // active octant list
 	const AMRVolume *amrVolumePtr = nullptr;
 
       private:
@@ -87,7 +92,6 @@ namespace ospray {
                                std::vector<float> *outOctW);
 
 
-        // std::vector<Octant> octants;
 
         size_t octNum;
         std::vector<vec3f> octVertices;
@@ -95,7 +99,6 @@ namespace ospray {
         float *octValueBuffer;
 
         std::vector<Range> octRange;
-
         std::vector<box3fa> clapBoxes;
 
 	
