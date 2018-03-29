@@ -83,7 +83,7 @@ namespace ospray {
         }
 
       private:
-        std::vector<Octant> octants; // active octant list
+        // std::vector<Octant> octants; // active octant list
         std::vector<box3fa> clipBoxes;
 	const AMRVolume *amrVolumePtr = nullptr;
 

@@ -40,38 +40,57 @@ namespace ospray {
   namespace impi {
     namespace testCase {
 
+      // extern "C" void  externC_push_back(void * _c_vector,
+      // 					 void * _c_ptr,
+      // 					 const float v0,
+      // 					 const float v1,
+      // 					 const float v2,
+      // 					 const float v3,
+      // 					 const float v4,
+      // 					 const float v5,
+      // 					 const float v6,
+      // 					 const float v7,
+      // 					 const float c0,
+      // 					 const float c1,
+      // 					 const float c2,
+      // 					 const float cellwidth)
+      // {	
+      // 	auto c_ptr = (TestOctant*) _c_ptr;
+      // 	vec3f coordinate(c0, c1, c2);
+      // 	if (c_ptr->inClipBox(box3fa(coordinate, coordinate + cellwidth))) {  
+      // 	  auto c_vector = (std::vector<Octant>*) _c_vector;
+      // 	  c_vector->emplace_back();	
+      // 	  c_vector->back().vtx[0][0][0] = v0;
+      // 	  c_vector->back().vtx[0][0][1] = v1;
+      // 	  c_vector->back().vtx[0][1][0] = v2;
+      // 	  c_vector->back().vtx[0][1][1] = v3;
+      // 	  c_vector->back().vtx[1][0][0] = v4;
+      // 	  c_vector->back().vtx[1][0][1] = v5;
+      // 	  c_vector->back().vtx[1][1][0] = v6;
+      // 	  c_vector->back().vtx[1][1][1] = v7;
+      // 	  c_vector->back().lowerleft = coordinate;
+      // 	  c_vector->back().cellwidth = cellwidth;
+      // 	}
+      // }
       extern "C" void  externC_push_back(void * _c_vector,
 					 void * _c_ptr,
-					 const float v0,
-					 const float v1,
-					 const float v2,
-					 const float v3,
-					 const float v4,
-					 const float v5,
-					 const float v6,
-					 const float v7,
+					 const uint32_t lid,
+					 const uint32_t oid,
 					 const float c0,
 					 const float c1,
 					 const float c2,
 					 const float cellwidth)
       {	
-	auto c_ptr = (TestOctant*) _c_ptr;
-	vec3f coordinate(c0, c1, c2);
-	if (c_ptr->inClipBox(box3fa(coordinate, coordinate + cellwidth))) {	  
-	  auto c_vector = (std::vector<Octant>*) _c_vector;
-	  c_vector->emplace_back();	
-	  c_vector->back().vtx[0][0][0] = v0;
-	  c_vector->back().vtx[0][0][1] = v1;
-	  c_vector->back().vtx[0][1][0] = v2;
-	  c_vector->back().vtx[0][1][1] = v3;
-	  c_vector->back().vtx[1][0][0] = v4;
-	  c_vector->back().vtx[1][0][1] = v5;
-	  c_vector->back().vtx[1][1][0] = v6;
-	  c_vector->back().vtx[1][1][1] = v7;
-	  c_vector->back().lowerleft = coordinate;
-	  c_vector->back().cellwidth = cellwidth;
+	const auto c_ptr = (TestOctant*) _c_ptr;
+	const auto box = box3fa(vec3f(c0, c1, c2), 
+				vec3f(c0, c1, c2) + cellwidth);
+	if (c_ptr->inClipBox(box)) {
+	  auto c_vector = (std::vector<uint64_t>*) _c_vector;
+	  uint64_t idx = (uint64_t(lid) << 32) | uint64_t(oid);
+	  c_vector->push_back(idx);
 	}
       }
+
 
       /*! constructors and distroctors */
       TestOctant::TestOctant() {}
@@ -83,27 +102,66 @@ namespace ospray {
       /*! compute world-space bounds for given voxel */
       box3fa TestOctant::getVoxelBounds(const VoxelRef voxelRef) const 
       {
-        return box3fa(octants[voxelRef].lowerleft,
-		      octants[voxelRef].lowerleft + 
-		      octants[voxelRef].cellwidth);
+        // return box3fa(octants[voxelRef].lowerleft,
+	// 	      octants[voxelRef].lowerleft + 
+	// 	      octants[voxelRef].cellwidth);
+	return getVoxel(voxelRef).bounds;
       }
 
       /*! get full voxel - bounds and vertex values - for given voxel */
       Impi::Voxel TestOctant::getVoxel(const VoxelRef voxelRef) const 
       {
         Impi::Voxel voxel;
-        voxel.bounds = box3fa(octants[voxelRef].lowerleft,
-			      octants[voxelRef].lowerleft + 
-			      octants[voxelRef].cellwidth);
-        
-	voxel.vtx[0][0][0] = octants[voxelRef].vtx[0][0][0];
-        voxel.vtx[0][0][1] = octants[voxelRef].vtx[0][0][1];
-        voxel.vtx[0][1][0] = octants[voxelRef].vtx[0][1][0];
-        voxel.vtx[0][1][1] = octants[voxelRef].vtx[0][1][1];
-        voxel.vtx[1][0][0] = octants[voxelRef].vtx[1][0][0];
-        voxel.vtx[1][0][1] = octants[voxelRef].vtx[1][0][1];
-        voxel.vtx[1][1][0] = octants[voxelRef].vtx[1][1][0];
-        voxel.vtx[1][1][1] = octants[voxelRef].vtx[1][1][1];
+        // voxel.bounds = box3fa(octants[voxelRef].lowerleft,
+	// 		      octants[voxelRef].lowerleft + 
+	// 		      octants[voxelRef].cellwidth);        
+	// voxel.vtx[0][0][0] = octants[voxelRef].vtx[0][0][0];
+        // voxel.vtx[0][0][1] = octants[voxelRef].vtx[0][0][1];
+        // voxel.vtx[0][1][0] = octants[voxelRef].vtx[0][1][0];
+        // voxel.vtx[0][1][1] = octants[voxelRef].vtx[0][1][1];
+        // voxel.vtx[1][0][0] = octants[voxelRef].vtx[1][0][0];
+        // voxel.vtx[1][0][1] = octants[voxelRef].vtx[1][0][1];
+        // voxel.vtx[1][1][0] = octants[voxelRef].vtx[1][1][0];
+        // voxel.vtx[1][1][1] = octants[voxelRef].vtx[1][1][1];
+	union {
+	  uint32_t out[2];
+	  uint64_t in;
+	} caster;
+	caster.in = voxelRef;
+	uint32_t oid = caster.out[0];
+	uint32_t lid = caster.out[1];
+	// std::cout << lid << " " << oid << std::endl;; 
+
+	const ospray::amr::AMRAccel::Leaf &lf = amrVolumePtr->accel->leaf[lid];	
+	const float w = lf.brickList[0]->cellWidth; // cell width
+	const float s = lf.brickList[0]->gridToWorldScale;
+	const vec3f &lower = lf.bounds.lower;
+	const vec3f &upper = lf.bounds.upper;
+	const size_t nx = std::round((upper.x - lower.x) * s);
+	const size_t ny = std::round((upper.y - lower.y) * s);
+	const size_t nz = std::round((upper.z - lower.z) * s);
+	// add inner cells
+	const auto n1 = 
+	  (nx - size_t(1)) * (ny - size_t(1)) * (nz - size_t(1));
+	// bottom top boundray cells
+	const auto n2 = size_t(8) * ny * nx;
+	// left right boundray cells
+	const auto n3 = size_t(8) * nz * ny;
+	// front back boundary cells
+	const auto n4 = size_t(8) * nz * nx;
+	//
+	float cellwidth;
+	ispc::getVoxel(amrVolumePtr->getIE(),			      
+		       &voxel.vtx[0][0][0],
+		       (ispc::vec3f&)voxel.bounds.lower,
+		       cellwidth,
+		       w, oid, 
+		       (ispc::vec3f&)lower, (ispc::vec3f&)upper,
+		       (uint32_t)nx, (uint32_t)ny, (uint32_t)nz,
+		       (uint32_t)n1,
+		       (uint32_t)(n2 + n1),
+		       (uint32_t)(n3 + n2 + n1));
+	voxel.bounds.upper = voxel.bounds.lower + cellwidth;
         return voxel;
       }
 
@@ -112,7 +170,8 @@ namespace ospray {
       void TestOctant::buildActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
 					 const float isoValue)
       {
-	octants.clear();
+	// octants.clear();
+	activeVoxels.clear(); // the output
 #if ON_THE_FLY /* Qi: hijack here for on-the-fly calculation */
 	//------------------------------------------------------------------//
 	// 		
@@ -176,8 +235,10 @@ namespace ospray {
 	//
 	// Testing my implementation
 	//
-        std::cout << "#osp:impi: Computing Values Values" << std::endl;
-	auto leafActiveOctants = new std::vector<Octant>[nLeaf];
+        std::cout << "#osp:impi: Number of Leaves " << nLeaf << std::endl;
+        std::cout << "#osp:impi: Computing Values Values " << std::endl;
+	//auto leafActiveOctants = new std::vector<Octant>[nLeaf];
+	auto leafActiveOctants = new std::vector<uint64_t>[nLeaf];
 	// repeat the computation here for testing purpose
 	speedtest__("#osp:impi: Compute Octants Values") {	  
 	  tasking::parallel_for(nLeaf, [&] (size_t lid) {
@@ -235,7 +296,7 @@ namespace ospray {
 	      const size_t e = N;
 	      ispc::getVoxel_Octant(amrVolumePtr->getIE(),
 				    this, &leafActiveOctants[lid],
-				    isoValue, w, 
+				    isoValue, w, lid, 
 				    (ispc::vec3f&)lower, (ispc::vec3f&)upper,
 				    (uint32_t)b,  (uint32_t)e, 
 				    (uint32_t)nx, (uint32_t)ny, (uint32_t)nz,
@@ -259,11 +320,12 @@ namespace ospray {
 	  // std::cout << leafActiveOctants[lid].size() << " "
 	  // 	    << begin[lid] << std::endl;
 	}
-	octants.resize(n);
+	// octants.resize(n);
+	activeVoxels.resize(n);
         tasking::parallel_for(nLeaf, [&](const size_t lid) {
           std::copy(leafActiveOctants[lid].begin(),
                     leafActiveOctants[lid].end(),
-                    &octants[begin[lid]]);
+                    &activeVoxels[begin[lid]]);
         });
 
 	delete[] leafActiveOctants;
@@ -278,13 +340,13 @@ namespace ospray {
 	// 			       numOfOctants * 8)
         //           << std::endl;
 	
-        std::cout << "Done Init Octant Value! " << octants.size() << std::endl;
+        std::cout << "Done Init Octant Value! " << activeVoxels.size() << std::endl;
 	//------------------------------------------------------------------//	
 #endif
-        activeVoxels.clear(); // the output
-	for (int i = 0; i < octants.size(); ++i)  {
-	  activeVoxels.push_back(i);
-	}
+        //activeVoxels.clear(); // the output
+	//for (int i = 0; i < octants.size(); ++i)  {
+	//  activeVoxels.push_back(i);
+	//}
       }
 
       void TestOctant::getActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
