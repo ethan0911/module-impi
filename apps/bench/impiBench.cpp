@@ -59,7 +59,7 @@ static vec2i imgSize{1024, 768};
 static vec2i numFrames{1/* skipped */, 20/* measure */};
 static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0));
 
-<<<<<<< HEAD
+
 // static std::vector<vec3f> colors = {
 //   vec3f(0.0, 0.000, 0.563),
 //   vec3f(0.0, 0.000, 1.000),
@@ -70,8 +70,7 @@ static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0))
 //   vec3f(0.5, 0.000, 0.000),
 // };
 // static std::vector<float> opacities = { 1.f, 1.f };
-=======
->>>>>>> be1d583e47fb6042e5e026de5674209212ac2a33
+
 static std::vector<float> colors = {
     0, 0, 0,
     0, 0.00755413, 0.0189916,
@@ -825,7 +824,6 @@ int main(int ac, const char** av)
 
   // setup isosurfaces
   OSPModel local = ospNewModel();
-<<<<<<< HEAD
   // Node: all isosurfaces will share one material for now
 
   // OSPMaterial mtl = ospNewMaterial(renderer, "OBJMaterial");
@@ -838,8 +836,7 @@ int main(int ac, const char** av)
   ospSet1f(mtl,"thickness",0.1f);
 
   ospCommit(mtl);
-=======
->>>>>>> be1d583e47fb6042e5e026de5674209212ac2a33
+
   switch (isoMode) {
   case NORMAL:
     // --> normal isosurface
@@ -852,14 +849,14 @@ int main(int ac, const char** av)
       ospCommit(nmtl);
       std::vector<float> vlist(isoValues.size());
       for (auto i = 0; i < isoValues.size(); ++i) {
-	vlist[i] = isoValues[i].v;
+        vlist[i] = isoValues[i].v;
       }
-      OSPGeometry niso = ospNewGeometry("isosurfaces");
-      OSPData niso_values = ospNewData(vlist.size(), OSP_FLOAT, 
-				       vlist.data());
+      OSPGeometry niso    = ospNewGeometry("isosurfaces");
+      OSPData niso_values = ospNewData(vlist.size(), OSP_FLOAT, vlist.data());
       ospSetData(niso, "isovalues", niso_values);
       ospSetObject(niso, "volume", volume);
-      ospSetMaterial(niso, nmtl); // see performance impact (x7 slower for cosmos)
+      ospSetMaterial(niso,
+                     nmtl);  // see performance impact (x7 slower for cosmos)
       ospCommit(niso);
       ospAddGeometry(local, niso);
       ospCommit(local);
@@ -885,39 +882,40 @@ int main(int ac, const char** av)
       //   //OSPGeometry triangle = make_triangle();
       //   //ospAddGeometry(world, triangle);
 
-
-      //       we build multiple iso-geometries here      
-      for (auto& v : isoValues) {
-	std::cout << "v = " << v.v << " "
-		  << "c = " << v.c.x << " " << v.c.y << " " << v.c.z
-		  << std::endl;
-	if (rendererName == "scivis") {
-	  v.mtl = ospNewMaterial(renderer, "OBJMaterial");
-	  ospSetVec3f(v.mtl, "Kd", (const osp::vec3f&)v.c);
-	  ospSetVec3f(v.mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
-	  ospSet1f(v.mtl, "Ns", 10.f);
-	  ospCommit(v.mtl);
-	} else {
-	  //
-	  //v.mtl = ospNewMaterial(renderer, "ThinGlass");
-	  //ospSetVec3f(v.mtl, "attenuationColor", (const osp::vec3f&)v.c);
-	  //ospSet1f(v.mtl, "thickness", 0.1f);
-	  //
-	  //v.mtl = ospNewMaterial(renderer, "Alloy");
-	  //ospSetVec3f(v.mtl, "color", (const osp::vec3f&)v.c);
-	  //
-	  v.mtl = ospNewMaterial(renderer, "MetallicPaint");
-	  ospSetVec3f(v.mtl, "baseColor", (const osp::vec3f&)v.c);
-	  //
-	  ospCommit(v.mtl);
-	}
-	v.geo = ospNewGeometry("impi"); 
-	ospSet1f(v.geo, "isoValue", v.v);
-	ospSetObject(v.geo, "amrDataPtr", volume);
-	ospSetMaterial(v.geo, v.mtl); // see performance impact (x7 slower for cosmos)
-	ospCommit(v.geo);
-	ospAddGeometry(local, v.geo);
-	ospCommit(local);
+      //       we build multiple iso-geometries here
+      for (auto &v : isoValues) {
+        std::cout << "v = " << v.v << " "
+                  << "c = " << v.c.x << " " << v.c.y << " " << v.c.z
+                  << std::endl;
+        if (rendererName == "scivis") {
+          v.mtl = ospNewMaterial(renderer, "OBJMaterial");
+          ospSetVec3f(v.mtl, "Kd", (const osp::vec3f &)v.c);
+          ospSetVec3f(v.mtl, "Ks", osp::vec3f{0.1f, 0.1f, 0.1f});
+          ospSet1f(v.mtl, "Ns", 10.f);
+          ospSet1f(v.mtl, "d", 0.8f);
+          ospCommit(v.mtl);
+        } else {
+          //
+          // v.mtl = ospNewMaterial(renderer, "ThinGlass");
+          // ospSetVec3f(v.mtl, "attenuationColor", (const osp::vec3f&)v.c);
+          // ospSet1f(v.mtl, "thickness", 0.1f);
+          //
+          // v.mtl = ospNewMaterial(renderer, "Alloy");
+          // ospSetVec3f(v.mtl, "color", (const osp::vec3f&)v.c);
+          //
+          v.mtl = ospNewMaterial(renderer, "MetallicPaint");
+          ospSetVec3f(v.mtl, "baseColor", (const osp::vec3f &)v.c);
+          //
+          ospCommit(v.mtl);
+        }
+        v.geo = ospNewGeometry("impi");
+        ospSet1f(v.geo, "isoValue", v.v);
+        ospSetObject(v.geo, "amrDataPtr", volume);
+        ospSetMaterial(v.geo,v.mtl);  // see performance impact (x7 slower for cosmos)
+        ospCommit(v.geo);
+        //ospAddGeometry(local, v.geo);
+        //ospCommit(local);
+        ospAddGeometry(world, v.geo);
 
       }
     }
@@ -987,7 +985,7 @@ int main(int ac, const char** av)
   // setup world & renderer
   ospCommit(world); 
   ospSetVec3f(renderer, "bgColor", 
-	      osp::vec3f{0.f, 0.f, 0.f});
+	      osp::vec3f{1.f, 1.f, 1.f});
   ospSetData(renderer, "lights", lights);
   ospSetObject(renderer, "model", world);
   ospSetObject(renderer, "camera", camera);

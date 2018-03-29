@@ -17,41 +17,54 @@
 #include "TestOctant.h"
 #include "ospcommon/tasking/parallel_for.h"
 #include "ospcommon/utility/getEnvVar.h"
+#include <ctime>
 #include "time.h"
+#include <ratio>
+#include <chrono>
 #include <ospray/common/Data.h>
 #include "ospray/AMRVolume_ispc.h"
 #include "ospray/method_finest_ispc.h"
 #include "ospray/method_current_ispc.h"
 #include "ospray/method_octant_ispc.h"
+using namespace std::chrono;
 
 #ifndef speedtest__
 #define speedtest__(data)                                           \
   for (long blockTime = NULL;                                       \
        (blockTime == NULL ? (blockTime = clock()) != NULL : false); \
-       printf("Calculate Time: %.9fs \n", (double)(clock() - blockTime) / CLOCKS_PER_SEC))
+       printf("%s Calculate Time: %.9fs \n", data, (double)(clock() - blockTime) / CLOCKS_PER_SEC))
 #endif
 
 namespace ospray {
   namespace impi {
     namespace testCase {
 
-      TestOctant::TestOctant(){
-      }
+      TestOctant::TestOctant() {}
 
-      void TestOctant::initOctant(ospray::AMRVolume * amr)
+      void TestOctant::initOctant(ospray::AMRVolume *amr)
       {
         assert(amr != NULL);
         std::cout << "Start to Init Octant Value" << std::endl;
-        
-        buildOctant(amr);
-        initOctantValue(amr);
 
+        //clock_t begin_time = clock();
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+        buildOctant(amr);
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+        printf("Generate Octant Time: %.9fs \n", time_span.count());
+        
+        t1 = high_resolution_clock::now();
+        initOctantValue(amr);
+        t2 = high_resolution_clock::now();
+        time_span = duration_cast<duration<double>>(t2-t1);
+        printf("Initialize Octant Time: %.9fs \n", time_span.count());
         auto wb = amr->accel->worldBounds;
 
         // vec3f center = wb.center();
         // box3fa b1 = box3fa(wb.lower,wb.upper);
         // b1.upper.x *= 0.5f;
-        // box3fa b2 = box3fa(vec3f(center.x,0.f,0.f),vec3f(wb.upper.x,center.y,center.z));
+        // box3fa b2 =
+        // box3fa(vec3f(center.x,0.f,0.f),vec3f(wb.upper.x,center.y,center.z));
         // box3fa b3 = box3fa(vec3f(center.x,center.y,0.f),wb.upper);
         // this->clapBoxes.push_back(b1);
         // this->clapBoxes.push_back(b2);
@@ -61,7 +74,7 @@ namespace ospray {
         b1.upper.z *= 0.5f;
         this->clapBoxes.push_back(b1);
 
-        speedtest__("Speed: ")
+        speedtest__("Generate Value Range for Octant - ")
         {
           this->octRange.resize(this->octNum);
           for (size_t i = 0; i < this->octNum; i++) {
