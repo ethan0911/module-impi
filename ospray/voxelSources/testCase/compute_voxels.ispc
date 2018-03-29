@@ -693,6 +693,83 @@ export void getOneVoxel_octant(void *uniform _self,
   }
 }
 
+export void getOneVoxelBounds_octant(void *uniform _self,
+				     // outputs
+				     uniform float &oW,
+				     uniform vec3f &oC,
+				     // inputs
+				     const uniform float  &cw,
+				     const uniform vec3f &lower,
+				     const uniform vec3f &upper,
+				     const uniform uint32 i, 
+				     const uniform uint32 nx,
+				     const uniform uint32 ny,
+				     const uniform uint32 nz,
+				     // different type of cells
+				     const uniform uint32 n1,
+				     const uniform uint32 n2,
+				     const uniform uint32 n3)
+{
+  AMRVolume *uniform self = (AMRVolume * uniform) _self;
+  // so here we need to compute the point position from index
+  const uniform float halfCW = 0.5f * cw;
+  //
+  // compute width and coordinate
+  //
+  /* add inner cells */
+  if (i < n1) { 
+    const uniform uint32 ix = i % (nx - 1);
+    const uniform uint32 iy = (i % ((ny - 1) * (nx - 1))) / (nx - 1);
+    const uniform uint32 iz = i / ((ny - 1) * (nx - 1));
+    oW = cw;
+    oC.x = lower.x + halfCW + cw * ix;
+    oC.y = lower.y + halfCW + cw * iy;
+    oC.z = lower.z + halfCW + cw * iz;
+  }
+  /* bottom top boundray cells */
+  else if (i < n2) { 
+    const uniform uint32 ix = ((i - n1) % (4 * nx)) / 2;
+    const uniform uint32 iy = (i - n1) / (4 * nx);
+    oW = halfCW;
+    oC.x = lower.x + halfCW * ix;
+    oC.y = lower.y + halfCW * iy;
+    if ((i-n1) % 2 == 0) {
+      oC.z = lower.z;
+    } else {
+      oC.z = upper.z - halfCW;
+    }      
+  } 
+  /* left right boundray cells */
+  else if (i < n3) { 
+    const uniform uint32 iy = ((i - n2) % (4 * ny)) / 2;
+    const uniform uint32 iz = (i - n2) / (4 * ny);
+    oW = halfCW;
+    oC.y = lower.y + halfCW * iy;
+    oC.z = lower.z + halfCW * iz;
+    if ((i-n2) % 2 == 0) {
+      oC.x = lower.x;
+    } else {
+      oC.x = upper.x - halfCW;
+    }
+  } 
+  /* front back boundary cells */
+  else { 
+    const uniform uint32 ix = ((i - n3) % (4 * nx)) / 2;
+    const uniform uint32 iz = (i - n3) / (4 * nx);
+    oW = halfCW;
+    oC.x = lower.x + halfCW * ix;
+    oC.z = lower.z + halfCW * iz;
+    if ((i-n3) % 2 == 0) {
+      oC.y = lower.y;
+    } else {
+      oC.y = upper.y - halfCW;
+    }           
+  } 
+}
+
+// ======================================================================== //
+// getOneVoxel 
+// ======================================================================== //
 void getAllVoxels_octant(AMRVolume *uniform self,
 			 // outputs
 			 float &oW,

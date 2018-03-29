@@ -318,7 +318,49 @@ namespace ospray {
       box3fa TestOctant::getVoxelBounds_none(const VoxelRef voxelRef) 
 	const 
       {
-	return getVoxel_none(voxelRef).bounds;
+	//return getVoxel_none(voxelRef).bounds;
+	// unpack VoxelRef (uint64_t) into two uint32_t indices
+	union {
+	  uint32_t out[2];
+	  uint64_t in;
+	} unpack;
+	unpack.in = voxelRef;
+	const uint32_t &oid = unpack.out[0];
+	const uint32_t &lid = unpack.out[1];
+
+	const AMRLeaf &lf = amrVolumePtr->accel->leaf[lid];
+
+	const float w = lf.brickList[0]->cellWidth; // cell width
+	const float s = lf.brickList[0]->gridToWorldScale;
+	const vec3f &lower = lf.bounds.lower;
+	const vec3f &upper = lf.bounds.upper;
+	const size_t nx = std::round((upper.x - lower.x) * s);
+	const size_t ny = std::round((upper.y - lower.y) * s);
+	const size_t nz = std::round((upper.z - lower.z) * s);
+	// add inner cells
+	const auto n1 = 
+	  (nx - size_t(1)) * (ny - size_t(1)) * (nz - size_t(1));
+	// bottom top boundray cells
+	const auto n2 = size_t(8) * ny * nx;
+	// left right boundray cells
+	const auto n3 = size_t(8) * nz * ny;
+	// front back boundary cells
+	// const auto n4 = size_t(8) * nz * nx;
+	//
+	float cellwidth;
+	box3fa bounds;
+	ispc::getOneVoxelBounds_octant(amrVolumePtr->getIE(),		
+			       cellwidth,	     
+			       (ispc::vec3f&)bounds.lower, 
+			       w,
+			       (ispc::vec3f&)lower, (ispc::vec3f&)upper,
+				 oid, 
+			       (uint32_t)nx, (uint32_t)ny, (uint32_t)nz,
+			       (uint32_t)n1,
+			       (uint32_t)(n2 + n1),
+			       (uint32_t)(n3 + n2 + n1));
+	bounds.upper = bounds.lower + cellwidth;
+	return bounds;
       }
 
       /*! get full voxel - bounds and vertex values - for given voxel */
