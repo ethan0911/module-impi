@@ -47,18 +47,22 @@ namespace ospray {
       etc */
     struct Impi : public ospray::Geometry
     {
-      /*! a voxel made up of 8 floating point corner values, and the world space bounding box of this voxel */
+      /*! a voxel made up of 8 floating point corner values, and the world 
+	space bounding box of this voxel */
       struct Voxel {
         float  vtx[2][2][2];
         box3fa bounds;
       };
       
-      /*! interace that abstracts where the Impi is getting its voxels from */
+      /*! interace that abstracts where the Impi is getting its voxels from
+       */
       struct VoxelSource {
         typedef uint64_t VoxelRef;
 
-        /*! create lits of *all* voxel (refs) we want to be considered for interesction */
-        virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, float isoValue) const = 0;
+        /*! create lits of *all* voxel (refs) we want to be considered for 
+	  interesction */
+        virtual void   getActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
+				       float isoValue) const = 0;
 
         /*! compute world-space bounds for given voxel */
         virtual box3fa getVoxelBounds(const VoxelRef voxelRef) const = 0;
@@ -77,7 +81,8 @@ namespace ospray {
           "ospCommit(<thisGeometry>)" */
       virtual void commit() override;
 
-      /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
+      /*! create voxel source from whatever parameters we have been passed
+	(right no, hardcoded) */
       void initVoxelSourceAndIsoValue();
 
       /*! 'finalize' is what ospray calls when everything is set and
@@ -89,10 +94,12 @@ namespace ospray {
 
       /*! the voxelsource that generates the actal voxels we need to intersect */
       std::shared_ptr<VoxelSource> voxelSource;
+
       /*! the isovalue we're intersecting with */
       float isoValue;
-      vec4f isoColor;
       float lastIsoValue;
+      vec4f isoColor;
+
     };
 
   } // ::ospray::bilinearPatch

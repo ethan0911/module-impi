@@ -52,14 +52,13 @@ OSPRAY_CREATE_LIBRARY(ospray_module_impi
   # and finally, the module init code (not doing much, but must be there)
   moduleInit.cpp
 
-
   # =======================================================
   # "instantiations" of the Impi abstractin: ie, class that can
   # generate voxels that Impi can then build a bvh over and intersct
-
   # testamr - generates a simple, amr-like test data set
   voxelSources/testCase/TestAMR.cpp
   voxelSources/testCase/TestOctant.cpp
+  voxelSources/testCase/compute_voxels.ispc
   # structuredvolume: generates (on the fly) all active voxels from a structured volume
   voxelSources/structured/Volume.cpp
   voxelSources/structured/StructuredVolumeSource.cpp
@@ -67,9 +66,7 @@ OSPRAY_CREATE_LIBRARY(ospray_module_impi
   # 'segmentatiln' volume that serves as a mask (only voxels whose
   # range in the segmentation volume overlap a given segment value
   # will be included
-  voxelSources/structured/SegmentedVolumeSource.cpp
-
-  
+  voxelSources/structured/SegmentedVolumeSource.cpp  
   # this depends on ospray core:
   LINK
   ospray
