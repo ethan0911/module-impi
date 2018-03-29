@@ -29,19 +29,9 @@ namespace ospray {
       
       struct Octant
       {	
-	box3f bounds;
-	Impi::Voxel voxel;
-
-	//vec3f coordinate;
-        //float width;
-        //float vertexValue[2][2][2];
-        /* inline Range getRange() const { */
-        /*   Range range; */
-        /*   array3D::for_each(vec3i(2),[&](const vec3i idx) { */
-        /*       range.extend(vertexValue[idx.z][idx.y][idx.x]); */
-        /*     }); */
-        /*   return range; */
-        /* } */
+	vec3f lowerleft;
+	float cellwidth;
+        float vtx[2][2][2];
       };
 
       /*! implements a simple (vertex-cenetred) AMR test case
@@ -50,8 +40,7 @@ namespace ospray {
 	  finer level */
       struct TestOctant : public Impi::VoxelSource
       {
-      public:
-	
+      public:	
 	/*! constructors and distroctors */
         TestOctant();
         virtual ~TestOctant();
@@ -67,19 +56,45 @@ namespace ospray {
         virtual void getActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
 				     float isoValue) const override;
 
+      public: 
+
+        void buildActiveVoxels(std::vector<VoxelRef> &activeVoxels, 
+			       float isoValue);
+
+
 	/*! initialization */
         void initOctant(ospray::AMRVolume *amr);
+	
+
+
+	/*! check if the voxel is inside the clip box */
+	bool inClipBox(const box3f& box) const {
+	  return inClipBox(box3fa(box.lower, box.upper));
+	}
+	bool inClipBox(const box3fa& box) const {
+          bool result = false;
+          for(auto clipbox: clipBoxes) {
+            if (touchingOrOverlapping(clipbox, box)) {
+              result = true;
+              break;
+            }
+          }
+          return result;
+        }
 
       private:
-
         std::vector<Octant> octants; // active octant list
+        std::vector<box3fa> clipBoxes;
 	const AMRVolume *amrVolumePtr = nullptr;
+
 
       private:
 	//TODO things below should be cleaned
 	
         //void parseOctant(std::string fileName);
-        /*! create lits of *all* voxel (refs) we want to be considered for interesction */
+        /*! create lits of *all* voxel (refs) we want to be considered for 
+	  interesction */
+        size_t octNum = 0;
 
         void initOctantValue(ospray::AMRVolume *amr);
 
@@ -93,26 +108,14 @@ namespace ospray {
 
 
 
-        size_t octNum;
         std::vector<vec3f> octVertices;
         std::vector<float> octWidth;
         float *octValueBuffer;
 
         std::vector<Range> octRange;
-        std::vector<box3fa> clapBoxes;
+
 
 	
-	bool isInClapBox(box3fa& box) const {
-          bool result = false;
-          for(auto clapbox: clapBoxes){
-            if(touchingOrOverlapping(clapbox,box)){
-              result = true;
-              break;
-            }
-          }
-          return result;
-        }
-
 	void getOctrange(size_t octID,Range* range)
         {
           for (size_t i = 0; i < 8; i++) {

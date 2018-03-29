@@ -23,6 +23,22 @@
 // ======================================================================== //
 #define DBG(a)
 
+/*! function to push back active voxel */
+unmasked extern "C" externC_push_back(void *uniform c_vector,
+				      void *uniform c_ptr,
+				      const uniform float v0,
+				      const uniform float v1,
+				      const uniform float v2,
+				      const uniform float v3,
+				      const uniform float v4,
+				      const uniform float v5,
+				      const uniform float v6,
+				      const uniform float v7,
+				      const uniform float c0,
+				      const uniform float c1,
+				      const uniform float c2,
+				      const uniform float cellwidth);
+
 struct Octant {
   // -------------------------------------------------------
   /* input parameters that specify the cell. coords must be the actual
@@ -115,7 +131,6 @@ void initOctantAndDual(Octant &O, DualCell &D, const vec3f &P,
 
   O.weights = abs(P - O.center) * (2.f * rcpCellWidth);
 }
-
 
 inline int getCurrentLevel(const AMR *uniform amr,const float currentWidth)
 {
@@ -550,11 +565,10 @@ varying float AMR_nearest(void *uniform _self, const varying vec3f &P)
 // ======================================================================== //
 // Codes to compute voxel values
 // ======================================================================== //
-
 export void getVoxel_Octant(void *uniform _self,
-			    uniform vec3f *uniform resultCoord,
-			    uniform float *uniform resultWidth,
-			    uniform float *uniform resultValue,
+			    void *uniform _cptr,   // C pointer
+			    void *uniform _vector, // STL vector in C++
+			    const uniform float &isovalue,
 			    const uniform float &cw,
 			    const uniform vec3f &lower,
 			    const uniform vec3f &upper,
@@ -570,9 +584,9 @@ export void getVoxel_Octant(void *uniform _self,
 {
   //
   // NOTE: definitions of nx, ny, nz are here
-  //const size_t nx = std::round((upper.x - lower.x) * s);
-  //const size_t ny = std::round((upper.y - lower.y) * s);
-  //const size_t nz = std::round((upper.z - lower.z) * s);
+  // const size_t nx = std::round((upper.x - lower.x) * s);
+  // const size_t ny = std::round((upper.y - lower.y) * s);
+  // const size_t nz = std::round((upper.z - lower.z) * s);
   //
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
   // so here we need to compute the point position from index
@@ -585,12 +599,6 @@ export void getVoxel_Octant(void *uniform _self,
     vec3f oC; // vertex coordinates
     /* add inner cells */
     if (i < n1) { 
-      // for (fz = lower.z + halfCW; fz < upper.z - halfCW; fz += cw)
-      // for (fy = lower.y + halfCW; fy < upper.y - halfCW; fy += cw)
-      // for (fx = lower.x + halfCW; fx < upper.x - halfCW; fx += cw) {
-      //   oWidth.push_back(cw);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      // }
       const uint32 ix = i % (nx - 1);
       const uint32 iy = (i % ((ny - 1) * (nx - 1))) / (nx - 1);
       const uint32 iz = i / ((ny - 1) * (nx - 1));
@@ -601,15 +609,6 @@ export void getVoxel_Octant(void *uniform _self,
     }
     /* bottom top boundray cells */
     else if (i < n2) { 
-      // for (fy = lower.y; fy < upper.y; fy += halfCW)
-      // for (fx = lower.x; fx < upper.x; fx += halfCW) {
-      //   fz = lower.z;
-      //   oWidth.push_back(halfCW);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      //   fz = upper.z - halfCW;
-      //   oWidth.push_back(halfCW);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      // }
       const uint32 ix = ((i - n1) % (4 * nx)) / 2;
       const uint32 iy = (i - n1) / (4 * nx);
       oW = halfCW;
@@ -623,15 +622,6 @@ export void getVoxel_Octant(void *uniform _self,
     } 
     /* left right boundray cells */
     else if (i < n3) { 
-      // for (fz = lower.z; fz < upper.z; fz += halfCW)
-      // for (fy = lower.y; fy < upper.y; fy += halfCW) {
-      //   fx = lower.x;
-      //   oWidth.push_back(halfCW);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      //   fx = upper.x - halfCW;
-      //   oWidth.push_back(halfCW);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      // }
       const uint32 iy = ((i - n2) % (4 * ny)) / 2;
       const uint32 iz = (i - n2) / (4 * ny);
       oW = halfCW;
@@ -645,15 +635,6 @@ export void getVoxel_Octant(void *uniform _self,
     } 
     /* front back boundary cells */
     else { 
-      // for (fz = lower.z; fz < upper.z; fz += halfCW)
-      // for (fx = lower.x; fx < upper.x; fx += halfCW) {
-      //   fy = lower.y;
-      //   oWidth.push_back(halfCW);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      //   fy = upper.y - halfCW;
-      //   oWidth.push_back(halfCW);
-      //   oVertice.push_back(vec3f(fx, fy, fz));
-      // }
       const uint32 ix = ((i - n3) % (4 * nx)) / 2;
       const uint32 iz = (i - n3) / (4 * nx);
       oW = halfCW;
@@ -664,25 +645,45 @@ export void getVoxel_Octant(void *uniform _self,
       } else {
 	oC.y = upper.y - halfCW;
       }           
-    }
- 
+    } 
     //
     // now we compute voxel value
     //
-    resultCoord[i].x = oC.x;
-    resultCoord[i].y = oC.y;
-    resultCoord[i].z = oC.z;
-    resultWidth[i] = oW;
+    vec2f rg = make_vec2f(1e20, -1e20);
     float oV[8];
     for (uint32 j = 0; j < 8; j++) {
-      const vec3f vtxPos = make_vec3f((j & 1) ? oW : 0.f,
-                                      (j & 2) ? oW : 0.f,
-                                      (j & 4) ? oW : 0.f);
-      vec3f pos = oC + vtxPos;
+      // compute coordinate
+      const vec3f vp = make_vec3f((j & 1) ? oW : 0.f,
+				  (j & 2) ? oW : 0.f,
+				  (j & 4) ? oW : 0.f);
+      vec3f p = oC + vp;
       // hard code octant method here
-      oV[j] = AMR_octant(self, pos);
-      // test
-      resultValue[i * 8 + j] = oV[j];
+      oV[j] = AMR_octant(self, p);
+      // compute range
+      rg.x = min(rg.x, oV[j]);
+      rg.y = max(rg.y, oV[j]);
+    }
+    //
+    // push_back active voxels
+    //
+    bool inRange = rg.x < isovalue && rg.y > isovalue;
+    foreach_active(pid) {
+      if (inRange) {
+	// print("% \n", pid);
+	externC_push_back(_vector, _cptr, 
+			  extract(oV[0], pid), 
+			  extract(oV[1], pid), 
+			  extract(oV[2], pid), 
+			  extract(oV[3], pid), 
+			  extract(oV[4], pid), 
+			  extract(oV[5], pid), 
+			  extract(oV[6], pid), 
+			  extract(oV[7], pid), 
+			  extract(oC.x, pid),
+			  extract(oC.y, pid),
+			  extract(oC.z, pid),
+			  extract(oW, pid));
+      }
     }
   }
 }

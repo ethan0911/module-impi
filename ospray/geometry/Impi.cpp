@@ -110,7 +110,10 @@ namespace ospray {
 
       // generate list of active voxels
       if (this->lastIsoValue != isoValue) {
-        voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
+        std::shared_ptr<testCase::TestOctant> testOct =
+            std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
+	testOct->buildActiveVoxels(activeVoxelRefs, isoValue);
+        //voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
         this->lastIsoValue = isoValue;
       }
 
