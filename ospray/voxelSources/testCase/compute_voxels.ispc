@@ -23,29 +23,6 @@
 // ======================================================================== //
 #define DBG(a)
 
-/*! function to push back active voxel */
-// unmasked extern "C" externC_push_back(void *uniform c_vector,
-// 				      void *uniform c_ptr,
-// 				      const uniform float v0,
-// 				      const uniform float v1,
-// 				      const uniform float v2,
-// 				      const uniform float v3,
-// 				      const uniform float v4,
-// 				      const uniform float v5,
-// 				      const uniform float v6,
-// 				      const uniform float v7,
-// 				      const uniform float c0,
-// 				      const uniform float c1,
-// 				      const uniform float c2,
-// 				      const uniform float cellwidth);
-unmasked extern "C" externC_push_back(void *uniform c_vector,
-				      void *uniform c_ptr,
-				      const uniform uint32 lid,
-				      const uniform uint32 oid,
-				      const uniform float c0,
-				      const uniform float c1,
-				      const uniform float c2,
-				      const uniform float cellwidth);
 struct Octant {
   // -------------------------------------------------------
   /* input parameters that specify the cell. coords must be the actual
@@ -569,24 +546,83 @@ varying float AMR_nearest(void *uniform _self, const varying vec3f &P)
   return C.value;
 }
 
+export void getAMRValue_Octant(void *uniform _self,
+			       uniform float *uniform resultArray,
+			       uniform vec3f *uniform samplePos,
+			       uniform float *uniform octsWidth,
+			       const uniform int numOct)
+{
+  AMRVolume *uniform self = (AMRVolume * uniform) _self;
+  for(uniform int i = 0; i < numOct; i++) {
+    foreach (j = 0 ... 8) {
+      const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
+                                      (j & 2) ? octsWidth[i] : 0.f,
+                                      (j & 4) ? octsWidth[i] : 0.f);
+      vec3f pos          = samplePos[i] + vtxPos;
+      int idx = i*8 + j;
+      resultArray[idx] = AMR_octant(self, pos);
+    }
+  }
+}
+
+export void getAMRValue_Current(void *uniform _self,
+				uniform float *uniform resultArray,
+				uniform vec3f *uniform samplePos,
+				uniform float *uniform octsWidth,
+				const uniform int numOct)
+{
+  AMRVolume *uniform self = (AMRVolume * uniform) _self;
+  for(uniform int i = 0; i < numOct; i++) {
+    foreach (j = 0 ... 8) {
+      const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
+                                      (j & 2) ? octsWidth[i] : 0.f,
+                                      (j & 4) ? octsWidth[i] : 0.f);
+      vec3f pos          = samplePos[i] + vtxPos;
+      int idx = i*8 + j;
+      resultArray[idx] = AMR_current(self, pos);
+    }
+  }
+}
+
+export void getAMRValue_Nearest(void *uniform _self,
+				uniform float *uniform resultArray,
+				uniform vec3f *uniform samplePos,
+				uniform float *uniform octsWidth,
+				const uniform int numOct)
+{
+  AMRVolume *uniform self = (AMRVolume * uniform) _self;
+  for(uniform int i = 0; i < numOct; i++) {
+    foreach (j = 0 ... 8) {
+      const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
+                                      (j & 2) ? octsWidth[i] : 0.f,
+                                      (j & 4) ? octsWidth[i] : 0.f);
+      vec3f pos          = samplePos[i] + vtxPos;
+      int idx = i * 8 + j;
+      resultArray[idx] = AMR_nearest(self, pos);
+    }
+  }
+}
+
 // ======================================================================== //
-// Codes to compute voxel values
+// getOneVoxel 
 // ======================================================================== //
-export void getVoxel(void *uniform _self,
-		     uniform float *uniform values,
-		     uniform vec3f &coordinate,
-		     uniform float &cellwidth,
-		     const uniform float  &cw,
-		     const uniform uint32 &oid,
-		     const uniform vec3f &lower,
-		     const uniform vec3f &upper,
-		     const uniform uint32 nx,
-		     const uniform uint32 ny,
-		     const uniform uint32 nz,
-		     // different type of cells
-		     const uniform uint32 n1,
-		     const uniform uint32 n2,
-		     const uniform uint32 n3)
+export void getOneVoxel_octant(void *uniform _self,
+			// outputs
+			uniform float &oW,
+			uniform vec3f &oC,
+			uniform float *uniform oV,
+			// inputs
+			const uniform float  &cw,
+			const uniform vec3f &lower,
+			const uniform vec3f &upper,
+			const uniform uint32 i,     // grid index
+			const uniform uint32 nx,
+			const uniform uint32 ny,
+			const uniform uint32 nz,
+			// different type of cells
+			const uniform uint32 n1,
+			const uniform uint32 n2,
+			const uniform uint32 n3)
 {
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
   // so here we need to compute the point position from index
@@ -594,9 +630,6 @@ export void getVoxel(void *uniform _self,
   //
   // compute width and coordinate
   //
-  uniform float& oW = cellwidth;  // width
-  uniform vec3f& oC = coordinate; // vertex coordinates
-  const uniform uint32 &i = oid; 
   /* add inner cells */
   if (i < n1) { 
     const uniform uint32 ix = i % (nx - 1);
@@ -656,180 +689,231 @@ export void getVoxel(void *uniform _self,
 				(j & 4) ? oW : 0.f);
     const vec3f p = oC + vp;
     // hard code octant method here
-    values[j] = AMR_octant(self, p);
+    oV[j] = AMR_octant(self, p);
   }
-  
 }
 
-export void getVoxel_Octant(void *uniform _self,
-			    void *uniform _cptr,   // C pointer
-			    void *uniform _vector, // STL vector in C++
-			    const uniform float &isovalue,
-			    const uniform float &cw,
-			    const uniform uint32 &lid,
-			    const uniform vec3f &lower,
-			    const uniform vec3f &upper,
-			    const uniform uint32 b,   // begin
-			    const uniform uint32 e,   // end
-			    const uniform uint32 nx,
-			    const uniform uint32 ny,
-			    const uniform uint32 nz,
-			    // different type of cells
-			    const uniform uint32 n1,
-			    const uniform uint32 n2,
-			    const uniform uint32 n3)
+void getAllVoxels_octant(AMRVolume *uniform self,
+			 // outputs
+			 float &oW,
+			 vec3f &oC,
+			 vec2f &oR,
+			 float oV[8],
+			 // index
+			 const varying uint32 i,
+			 // inputs
+			 const uniform float &cw,    // full cell width
+			 const uniform float &halfCW,// half cell width
+			 const uniform vec3f &lower, // lower bbox
+			 const uniform vec3f &upper, // upper bbox
+			 const uniform uint32 nx,  
+			 const uniform uint32 ny,
+			 const uniform uint32 nz,
+			 // different type of cells
+			 const uniform uint32 n1,
+			 const uniform uint32 n2,
+			 const uniform uint32 n3)
 {
   //
-  // NOTE: definitions of nx, ny, nz are here
-  // const size_t nx = std::round((upper.x - lower.x) * s);
-  // const size_t ny = std::round((upper.y - lower.y) * s);
-  // const size_t nz = std::round((upper.z - lower.z) * s);
+  // compute width and coordinate
   //
+  /* add inner cells */
+  if (i < n1) { 
+    const uint32 ix = i % (nx - 1);
+    const uint32 iy = (i % ((ny - 1) * (nx - 1))) / (nx - 1);
+    const uint32 iz = i / ((ny - 1) * (nx - 1));
+    oW = cw;
+    oC.x = lower.x + halfCW + cw * ix;
+    oC.y = lower.y + halfCW + cw * iy;
+    oC.z = lower.z + halfCW + cw * iz;
+  }
+  /* bottom top boundray cells */
+  else if (i < n2) { 
+    const uint32 ix = ((i - n1) % (4 * nx)) / 2;
+    const uint32 iy = (i - n1) / (4 * nx);
+    oW = halfCW;
+    oC.x = lower.x + halfCW * ix;
+    oC.y = lower.y + halfCW * iy;
+    if ((i-n1) % 2 == 0) {
+      oC.z = lower.z;
+    } else {
+      oC.z = upper.z - halfCW;
+    }      
+  } 
+  /* left right boundray cells */
+  else if (i < n3) { 
+    const uint32 iy = ((i - n2) % (4 * ny)) / 2;
+    const uint32 iz = (i - n2) / (4 * ny);
+    oW = halfCW;
+    oC.y = lower.y + halfCW * iy;
+    oC.z = lower.z + halfCW * iz;
+    if ((i-n2) % 2 == 0) {
+      oC.x = lower.x;
+    } else {
+      oC.x = upper.x - halfCW;
+    }
+  } 
+  /* front back boundary cells */
+  else { 
+    const uint32 ix = ((i - n3) % (4 * nx)) / 2;
+    const uint32 iz = (i - n3) / (4 * nx);
+    oW = halfCW;
+    oC.x = lower.x + halfCW * ix;
+    oC.z = lower.z + halfCW * iz;
+    if ((i-n3) % 2 == 0) {
+      oC.y = lower.y;
+    } else {
+      oC.y = upper.y - halfCW;
+    }           
+  }
+  //
+  // now we compute voxel value
+  //
+  oR = make_vec2f(1e20, -1e20);
+  for (uint32 j = 0; j < 8; j++) {
+    // compute coordinate
+    const vec3f vp = make_vec3f((j & 1) ? oW : 0.f,
+				(j & 2) ? oW : 0.f,
+				(j & 4) ? oW : 0.f);
+    vec3f p = oC + vp;
+    // hard code octant method here
+    oV[j] = AMR_octant(self, p);
+    // compute range
+    oR.x = min(oR.x, oV[j]);
+    oR.y = max(oR.y, oV[j]);
+  } 
+}
+
+/*! function to push back active voxel */
+// ======================================================================== //
+// Codes to compute voxel values
+// ======================================================================== //
+
+unmasked extern "C" externC_push_back_active(void *uniform c_vector,
+					     void *uniform c_ptr,
+					     const uniform float v0,
+					     const uniform float v1,
+					     const uniform float v2,
+					     const uniform float v3,
+					     const uniform float v4,
+					     const uniform float v5,
+					     const uniform float v6,
+					     const uniform float v7,
+					     const uniform float c0,
+					     const uniform float c1,
+					     const uniform float c2,
+					     const uniform float cellwidth);
+
+unmasked extern "C" externC_push_back_none(void *uniform c_vector, 
+					   const void *uniform c_ptr,
+					   const uniform uint32 lid,
+					   const uniform uint32 oid,
+					   const uniform float c0,
+					   const uniform float c1,
+					   const uniform float c2,
+					   const uniform float cellwidth);
+
+// ======================================================================== //
+// Store active
+// ======================================================================== //
+export void getAllVoxels_active(void *uniform _self,
+				void *uniform _cptr,   // C pointer
+				void *uniform _vector, // STL vector in C++
+				const uniform float &isovalue,
+				const uniform float &fcw,
+				const uniform vec3f &lower,
+				const uniform vec3f &upper,
+				const uniform uint32 b,   // begin
+				const uniform uint32 e,   // end
+				const uniform uint32 nx,
+				const uniform uint32 ny,
+				const uniform uint32 nz,
+				// different type of cells
+				const uniform uint32 n1,
+				const uniform uint32 n2,
+				const uniform uint32 n3)
+{
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
   // so here we need to compute the point position from index
-  const uniform float halfCW = 0.5f * cw;
+  const uniform float hcw = 0.5f * fcw;
   foreach (i = b ... e) {    
-    //
-    // compute width and coordinate
-    //
-    float oW; // width
-    vec3f oC; // vertex coordinates
-    /* add inner cells */
-    if (i < n1) { 
-      const uint32 ix = i % (nx - 1);
-      const uint32 iy = (i % ((ny - 1) * (nx - 1))) / (nx - 1);
-      const uint32 iz = i / ((ny - 1) * (nx - 1));
-      oW = cw;
-      oC.x = lower.x + halfCW + cw * ix;
-      oC.y = lower.y + halfCW + cw * iy;
-      oC.z = lower.z + halfCW + cw * iz;
-    }
-    /* bottom top boundray cells */
-    else if (i < n2) { 
-      const uint32 ix = ((i - n1) % (4 * nx)) / 2;
-      const uint32 iy = (i - n1) / (4 * nx);
-      oW = halfCW;
-      oC.x = lower.x + halfCW * ix;
-      oC.y = lower.y + halfCW * iy;
-      if ((i-n1) % 2 == 0) {
-	oC.z = lower.z;
-      } else {
-	oC.z = upper.z - halfCW;
-      }      
-    } 
-    /* left right boundray cells */
-    else if (i < n3) { 
-      const uint32 iy = ((i - n2) % (4 * ny)) / 2;
-      const uint32 iz = (i - n2) / (4 * ny);
-      oW = halfCW;
-      oC.y = lower.y + halfCW * iy;
-      oC.z = lower.z + halfCW * iz;
-      if ((i-n2) % 2 == 0) {
-	oC.x = lower.x;
-      } else {
-	oC.x = upper.x - halfCW;
-      }
-    } 
-    /* front back boundary cells */
-    else { 
-      const uint32 ix = ((i - n3) % (4 * nx)) / 2;
-      const uint32 iz = (i - n3) / (4 * nx);
-      oW = halfCW;
-      oC.x = lower.x + halfCW * ix;
-      oC.z = lower.z + halfCW * iz;
-      if ((i-n3) % 2 == 0) {
-	oC.y = lower.y;
-      } else {
-	oC.y = upper.y - halfCW;
-      }           
-    } 
-    //
-    // now we compute voxel value
-    //
-    vec2f rg = make_vec2f(1e20, -1e20);
-    float oV[8];
-    for (uint32 j = 0; j < 8; j++) {
-      // compute coordinate
-      const vec3f vp = make_vec3f((j & 1) ? oW : 0.f,
-				  (j & 2) ? oW : 0.f,
-				  (j & 4) ? oW : 0.f);
-      vec3f p = oC + vp;
-      // hard code octant method here
-      oV[j] = AMR_octant(self, p);
-      // compute range
-      rg.x = min(rg.x, oV[j]);
-      rg.y = max(rg.y, oV[j]);
-    }
-    //
-    // push_back active voxels
-    //
+    // compute voxels
+    float oW;
+    vec3f oC;
+    vec2f rg;
+    float oV[8];    
+    getAllVoxels_octant(self,
+			/* outputs */oW, oC, rg, oV,
+			/* index */i,
+			/* inputs */fcw, hcw, lower, upper, nx,ny, nz,
+			/* different type of cells */n1, n2, n3);
     bool inRange = rg.x < isovalue && rg.y > isovalue;
     foreach_active(pid) {
       if (inRange) {
-	// print("% \n", pid);
-	externC_push_back(_vector, _cptr, lid, extract(i, pid),
-			  extract(oC.x, pid),
-			  extract(oC.y, pid),
-			  extract(oC.z, pid),
-			  extract(oW, pid));
+	externC_push_back_active(_vector, _cptr, 
+				 extract(oV[0], pid), 
+				 extract(oV[1], pid), 
+				 extract(oV[2], pid), 
+				 extract(oV[3], pid), 
+				 extract(oV[4], pid), 
+				 extract(oV[5], pid), 
+				 extract(oV[6], pid), 
+				 extract(oV[7], pid), 
+				 extract(oC.x, pid),
+				 extract(oC.y, pid),
+				 extract(oC.z, pid),
+				 extract(oW, pid));
       }
     }
   }
 }
 
-export void getAMRValue_Octant(void *uniform _self,
-			       uniform float *uniform resultArray,
-			       uniform vec3f *uniform samplePos,
-			       uniform float *uniform octsWidth,
-			       const uniform int numOct)
+// ======================================================================== //
+// Store none
+// ======================================================================== //
+export void getAllVoxels_none(void *uniform _self,
+			      const void *uniform _cptr,   // C pointer
+			      void *uniform _vector, // STL vector in C++
+			      const uniform float &isovalue,
+			      const uniform float &fcw,
+			      const uniform uint32 &lid,
+			      const uniform vec3f &lower,
+			      const uniform vec3f &upper,
+			      const uniform uint32 b,   // begin
+			      const uniform uint32 e,   // end
+			      const uniform uint32 nx,
+			      const uniform uint32 ny,
+			      const uniform uint32 nz,
+			      // different type of cells
+			      const uniform uint32 n1,
+			      const uniform uint32 n2,
+			      const uniform uint32 n3)
 {
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
-  for(uniform int i = 0; i < numOct; i++) {
-    foreach (j = 0 ... 8) {
-      const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
-                                      (j & 2) ? octsWidth[i] : 0.f,
-                                      (j & 4) ? octsWidth[i] : 0.f);
-      vec3f pos          = samplePos[i] + vtxPos;
-      int idx = i*8 + j;
-      resultArray[idx] = AMR_octant(self, pos);
+  // so here we need to compute the point position from index
+  const uniform float hcw = 0.5f * fcw;
+  foreach (i = b ... e) {    
+    // compute voxels
+    float oW;
+    vec3f oC;
+    vec2f rg;
+    float oV[8];    
+    getAllVoxels_octant(self,
+			/* outputs */oW, oC, rg, oV,
+			/* index */i,
+			/* inputs */fcw, hcw, lower, upper, nx,ny, nz,
+			/* different type of cells */n1, n2, n3);
+    // push_back active voxels
+    bool inRange = rg.x < isovalue && rg.y > isovalue;
+    foreach_active(pid) {
+      if (inRange) {
+	externC_push_back_none(_vector, _cptr, lid, extract(i, pid),
+			       extract(oC.x, pid),
+			       extract(oC.y, pid),
+			       extract(oC.z, pid),
+			       extract(oW, pid));
+      }
     }
   }
 }
 
-export void getAMRValue_Current(void *uniform _self,
-				uniform float *uniform resultArray,
-				uniform vec3f *uniform samplePos,
-				uniform float *uniform octsWidth,
-				const uniform int numOct)
-{
-  AMRVolume *uniform self = (AMRVolume * uniform) _self;
-  for(uniform int i = 0; i < numOct; i++) {
-    foreach (j = 0 ... 8) {
-      const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
-                                      (j & 2) ? octsWidth[i] : 0.f,
-                                      (j & 4) ? octsWidth[i] : 0.f);
-      vec3f pos          = samplePos[i] + vtxPos;
-      int idx = i*8 + j;
-      resultArray[idx] = AMR_current(self, pos);
-    }
-  }
-}
-
-export void getAMRValue_Nearest(void *uniform _self,
-				uniform float *uniform resultArray,
-				uniform vec3f *uniform samplePos,
-				uniform float *uniform octsWidth,
-				const uniform int numOct)
-{
-  AMRVolume *uniform self = (AMRVolume * uniform) _self;
-  for(uniform int i = 0; i < numOct; i++) {
-    foreach (j = 0 ... 8) {
-      const vec3f vtxPos = make_vec3f((j & 1) ? octsWidth[i] : 0.f,
-                                      (j & 2) ? octsWidth[i] : 0.f,
-                                      (j & 4) ? octsWidth[i] : 0.f);
-      vec3f pos          = samplePos[i] + vtxPos;
-      int idx = i * 8 + j;
-      resultArray[idx] = AMR_nearest(self, pos);
-    }
-  }
-}

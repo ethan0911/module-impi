@@ -42,7 +42,8 @@
     during traversal */
 
 
-/*! function to get the 3D world bounds of a given voxel reference, to be computed on the C++ side */
+/*! function to get the 3D world bounds of a given voxel reference,
+  to be computed on the C++ side */
 unmasked extern "C" externC_getVoxelBounds(uniform box3fa &voxelBounds,
                                            void *uniform c_self,
                                            const uniform uint64 voxelRef);
@@ -149,7 +150,6 @@ unmasked void Impi_bounds_testVoxel(Impi *uniform self,
 }
 
 
-
 /*! embree callback to compute voxel bounds - we simply pass that on to
     the C side (yes, might eventually do this completely on the
     C-side, without first going through this callback, too.... but
@@ -162,7 +162,6 @@ unmasked void Impi_bounds(Impi *uniform self,
 {
   externC_getVoxelBounds(bbox,self->c_self,self->activeVoxelRefs[primID]);
 }
-
 
 
 /*! intersect callback for the 'embree over hot voxels' method */
@@ -209,7 +208,8 @@ export void Impi_finalize(void   *uniform _self,
   
   // create a new embree geometry with numpathces prims, in the model
   // that this goemetry is in.
-  uint32 uniform geomID = rtcNewUserGeometry(model->embreeSceneHandle,numActiveVoxelRefs);
+  uint32 uniform geomID = rtcNewUserGeometry(model->embreeSceneHandle,
+					     numActiveVoxelRefs);
   self->super.geomID = geomID;
 
   // set 'us' as user data (this will be the first arg in intersect()

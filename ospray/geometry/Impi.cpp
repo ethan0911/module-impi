@@ -20,8 +20,9 @@
 // ospray core:
 #include <ospray/common/Data.h>
 
-#include "../voxelSources/testCase/TestVoxel.h"
-#include "../voxelSources/testCase/TestAMR.h"
+//#include "../voxelSources/testCase/TestVoxel.h"
+//#include "../voxelSources/testCase/TestAMR.h"
+
 #include "../voxelSources/testCase/TestOctant.h"
 #include "../voxelSources/structured/StructuredVolumeSource.h"
 #include "../voxelSources/structured/SegmentedVolumeSource.h"
@@ -29,7 +30,6 @@
 
 // #include "../common/Volume.h"
 #include <limits>
-
 
 
 /*! _everything_ in the ospray core universe should _always_ be in the
@@ -72,11 +72,11 @@ namespace ospray {
       PRINT(voxelSource);
       if (!voxelSource) {
         initVoxelSourceAndIsoValue();
-        ospray::AMRVolume *amrDataPtr =
-            (ospray::AMRVolume *)getParamObject("amrDataPtr", nullptr);
-        std::shared_ptr<testCase::TestOctant> testOct =
-            std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-        testOct->initOctant(amrDataPtr);
+        // ospray::AMRVolume *amrDataPtr =
+        //     (ospray::AMRVolume *)getParamObject("amrDataPtr", nullptr);
+        // std::shared_ptr<testCase::TestOctant> testOct =
+        //     std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
+        // testOct->initOctant(amrDataPtr);
       }
       isoValue = getParam1f("isoValue", 0.7f);
       isoColor = getParam4f("isoColor", vec4f(1.0f));
@@ -112,8 +112,8 @@ namespace ospray {
       if (this->lastIsoValue != isoValue) {
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-	testOct->buildActiveVoxels(activeVoxelRefs, isoValue);
-        //voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
+	testOct->build(isoValue);
+        voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
         this->lastIsoValue = isoValue;
       }
 
@@ -129,12 +129,14 @@ namespace ospray {
     /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
     void Impi::initVoxelSourceAndIsoValue()
     {
+      auto amr = (ospray::AMRVolume *)getParamObject("amrDataPtr", nullptr);
 #if 0
       isoValue = 20.f;
       voxelSource = std::make_shared<testCase::TestVoxel>();
 #elif 1
-      isoValue = 0.7f;
-      voxelSource = std::make_shared<testCase::TestOctant>();
+      isoValue = getParam1f("isoValue", 0.7f);
+      isoColor = getParam4f("isoColor", vec4f(1.0f));
+      voxelSource = std::make_shared<testCase::TestOctant>(amr, isoValue);
 #elif 0
       /*! create a simple, amr-like data structure - just to test different-sized voxels right next to each other */
       isoValue = 3.2f;
