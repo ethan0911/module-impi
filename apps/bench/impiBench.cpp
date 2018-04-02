@@ -910,7 +910,7 @@ int main(int ac, const char** av)
   ospSet1f(d_light, "intensity", 0.25f);
   ospSet1f(d_light, "angularDiameter", 0.53f);
   ospSetVec3f(d_light, "color", 
-	      osp::vec3f{127.f/255.f,178.f/255.f,255.f/255.f});
+	      osp::vec3f{255.f/255.f,255.f/255.f,255.f/255.f}); //127.f/255.f,178.f/255.f,255.f/255.f
   ospSetVec3f(d_light, "direction", (const osp::vec3f&)disDir);
   ospCommit(d_light);
   OSPLight s_light = ospNewLight(renderer, "DirectionalLight");
@@ -922,7 +922,7 @@ int main(int ac, const char** av)
   OSPLight a_light = ospNewLight(renderer, "AmbientLight");
   ospSet1f(a_light, "intensity", 0.90f);
   ospSetVec3f(a_light, "color", 
-	      osp::vec3f{174.f/255.f,218.f/255.f,255.f/255.f});
+	      osp::vec3f{255.f/255.f,255.f/255.f,255.f/255.f}); //174.f/255.f,218.f/255.f,255.f/255.f
   ospCommit(a_light);
   std::vector<OSPLight> light_list { a_light, d_light, s_light };
   OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, 
@@ -932,7 +932,7 @@ int main(int ac, const char** av)
   // setup world & renderer
   ospCommit(world); 
   ospSetVec3f(renderer, "bgColor", 
-	      osp::vec3f{0.f, 0.f, 0.f});
+	      osp::vec3f{1.f, 1.f, 1.f});
   ospSetData(renderer, "lights", lights);
   ospSetObject(renderer, "model", world);
   ospSetObject(renderer, "camera", camera);
