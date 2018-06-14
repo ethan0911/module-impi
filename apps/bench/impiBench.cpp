@@ -743,7 +743,7 @@ int main(int ac, const char** av)
   }
 
 #if USE_VIEWER
-  int window = ospray::viewer::Init(ac, av, imgSize.x, imgSize.y);
+  int window = viewer::Init(ac, av, imgSize.x, imgSize.y);
 #endif
 
   //-----------------------------------------------------
@@ -950,13 +950,14 @@ int main(int ac, const char** av)
 
 #if USE_VIEWER
 
-  ospray::viewer::Handler(camera, 
-			  (const osp::vec3f&)vp, 
-			  (const osp::vec3f&)vu, 
-			  (const osp::vec3f&)vi);
-  ospray::viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
-  ospray::viewer::Handler(world, renderer);
-  ospray::viewer::Render(window);
+
+  viewer::Handler(camera, "perspective",
+                  (const osp::vec3f &)vp,
+                  (const osp::vec3f &)vu,
+                  (const osp::vec3f &)vi);
+  viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
+  viewer::Handler(world, renderer);
+  viewer::Render(window);
 
 #else
 

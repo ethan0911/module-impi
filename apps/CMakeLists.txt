@@ -48,37 +48,27 @@ endif(OSPRAY_MODULE_IMPI_VIEWER)
 ## Benchmarker Widget
 ## ====================================================================== ##
 if (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
-  find_package(HDF5 REQUIRED)
-  include_directories(
-    bench/opengl/external
-    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/common/imgui
-    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src
-    ${OPENGL_INCLUDE_DIR}
-    ${HDF5_INCLUDE_DIRS})
-  ospray_create_application(ospImplicitIsoSurfaceWidget
-    bench/impiBench.cpp
-    bench/impiReader.cpp
-    bench/loader/meshloader.cpp
-    bench/opengl/viewer.cpp
-    bench/opengl/external/glad.c
-    bench/opengl/external/imgui_glfw_impi.cpp
-    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/TransferFunctionModule.cpp
-    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/common/jsoncpp.cpp
-    ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule/src/widgets/TransferFunctionWidget.cpp
-    LINK
-    ospray
-    ospray_common
-    ospray_xml
-    ospray_imgui
-    ospray_imgui3d_sg
-    ${OPENGL_LIBRARIES}
-    ${HDF5_C_LIBRARIES}
-    ${HDF5_C_HL_LIBRARIES})
-  set_target_properties(ospImplicitIsoSurfaceWidget
-    PROPERTIES 
-    CXX_STANDARD 11
-    COMPILE_DEFINITIONS
-    USE_VIEWER=1)
+add_subdirectory(bench/opengl)
+find_package(HDF5 REQUIRED)
+ospray_create_application(ospImplicitIsoSurfaceWidget
+  bench/impiBench.cpp
+  bench/impiReader.cpp
+  bench/loader/meshloader.cpp
+  LINK
+  ospray
+  ospray_common
+  ospray_xml
+  ospray_imgui
+  ospray_imgui3d_sg
+  ospray_impi_app_viewer
+  ${OPENGL_LIBRARIES}
+  ${HDF5_C_LIBRARIES}
+  ${HDF5_C_HL_LIBRARIES})
+set_target_properties(ospImplicitIsoSurfaceWidget
+  PROPERTIES 
+  CXX_STANDARD 14
+  COMPILE_DEFINITIONS
+  USE_VIEWER=1)
 endif (OSPRAY_MODULE_IMPI_BENCH_WIDGET)
 
 ## ==================================================================== ##
