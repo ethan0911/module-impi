@@ -122,13 +122,14 @@ namespace viewer {
   {
     sphere.Init();
     litProp.Append("ambient", "scivis",ospRen);
-    litProp[0].SetIntensity(0.555f);
+    litProp[0].SetIntensity(0.003);
+    litProp[0].SetColor(vec3f(131/255.f,131/255.f,131/255.f));
     litProp.Append("distant", "scivis",ospRen);
-    litProp[0].SetIntensity(1.300f);
-    litProp[0].SetColor(vec3f(-0.58f,0.68f,-0.75f));
+    litProp[1].SetIntensity(3.302);
+    litProp[1].SetColor(vec3f(166/255.f,188/255.f,214/255.f));
     litProp.Append("distant", "scivis",ospRen);
-    litProp[0].SetIntensity(0.085d);
-    litProp[0].SetColor(vec3f(-0.75f,0.68f,-0.75f));
+    litProp[2].SetIntensity(0.103);
+    litProp[2].SetColor(vec3f(186/255.f,213/255.f,246/255.f));
     litProp.Finalize();
     ospSetData(ospRen, "lights", *litProp);
     ospCommit(ospRen);

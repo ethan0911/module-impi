@@ -854,7 +854,7 @@ void getAllVoxels_octant(AMRVolume *uniform self,
 				(j & 4) ? oW : 0.f);
     vec3f p = oC + vp;
     // hard code octant method here
-    oV[j] = AMR_nearest(self,p);//AMR_current(self, p);//AMR_octant(self, p);
+    oV[j] = AMR_octant(self,p);//AMR_current(self, p);//AMR_octant(self, p);
     // compute range
     oR.x = min(oR.x, oV[j]);
     oR.y = max(oR.y, oV[j]);

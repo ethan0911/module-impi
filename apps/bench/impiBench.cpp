@@ -907,22 +907,22 @@ int main(int ac, const char** av)
 
   // setup lighting
   OSPLight d_light = ospNewLight(renderer, "DirectionalLight");
-  ospSet1f(d_light, "intensity", 0.25f);
+  ospSet1f(d_light, "intensity", 0.003f);
   ospSet1f(d_light, "angularDiameter", 0.53f);
   ospSetVec3f(d_light, "color", 
-	      osp::vec3f{255.f/255.f,255.f/255.f,255.f/255.f}); //127.f/255.f,178.f/255.f,255.f/255.f
+	      osp::vec3f{131/255.f,131/255.f,131/255.f}); //127.f/255.f,178.f/255.f,255.f/255.f
   ospSetVec3f(d_light, "direction", (const osp::vec3f&)disDir);
   ospCommit(d_light);
   OSPLight s_light = ospNewLight(renderer, "DirectionalLight");
-  ospSet1f(s_light, "intensity", 1.50f);
+  ospSet1f(s_light, "intensity", 3.302f);
   ospSet1f(s_light, "angularDiameter", 0.53f);
-  ospSetVec3f(s_light, "color", osp::vec3f{1.f,1.f,1.f});  
+  ospSetVec3f(s_light, "color", osp::vec3f{166/255.f,188/255.f,214/255.f});  
   ospSetVec3f(s_light, "direction", (const osp::vec3f&)sunDir);
   ospCommit(s_light);
   OSPLight a_light = ospNewLight(renderer, "AmbientLight");
-  ospSet1f(a_light, "intensity", 0.90f);
+  ospSet1f(a_light, "intensity", 0.103f);
   ospSetVec3f(a_light, "color", 
-	      osp::vec3f{255.f/255.f,255.f/255.f,255.f/255.f}); //174.f/255.f,218.f/255.f,255.f/255.f
+	      osp::vec3f{186/255.f,213/255.f,246/255.f}); //174.f/255.f,218.f/255.f,255.f/255.f
   ospCommit(a_light);
   std::vector<OSPLight> light_list { a_light, d_light, s_light };
   OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, 
