@@ -122,14 +122,16 @@ namespace viewer {
   {
     sphere.Init();
     litProp.Append("ambient", "scivis",ospRen);
-    litProp[0].SetIntensity(0.003);
-    litProp[0].SetColor(vec3f(131/255.f,131/255.f,131/255.f));
+    litProp[0].SetIntensity(1.9);
+    litProp[0].SetColor(vec3f(26/255.f,61/255.f,36/255.f));
     litProp.Append("distant", "scivis",ospRen);
-    litProp[1].SetIntensity(3.302);
-    litProp[1].SetColor(vec3f(166/255.f,188/255.f,214/255.f));
+    litProp[1].SetIntensity(3.052);
+    litProp[1].SetColor(vec3f(89/255.f,160/255.f,158/255.f));
+    litProp[1].SetDirection(vec3f(0.837f,0.469f,0.2f));
     litProp.Append("distant", "scivis",ospRen);
-    litProp[2].SetIntensity(0.103);
-    litProp[2].SetColor(vec3f(186/255.f,213/255.f,246/255.f));
+    litProp[2].SetIntensity(1.517);
+    litProp[2].SetColor(vec3f(0/255.f,19/255.f,41/255.f));
+    litProp[2].SetDirection(vec3f(-0.102,-0.143f,-0.56f));
     litProp.Finalize();
     ospSetData(ospRen, "lights", *litProp);
     ospCommit(ospRen);
@@ -199,14 +201,14 @@ void key_onhold_callback(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
       camera.CameraMovePX(0.5f * camera.CameraFocalLength());
     } else {
-      camera.CameraMovePX(0.0001f * camera.CameraFocalLength());
+      camera.CameraMovePX(0.005f * camera.CameraFocalLength());
     }
   } else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
     /* D: right */
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
       camera.CameraMovePX(-0.5f * camera.CameraFocalLength());
     } else {
-      camera.CameraMovePX(-0.0001f * camera.CameraFocalLength());
+      camera.CameraMovePX(-0.005f * camera.CameraFocalLength());
     }
   } else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
     /* S: down */
