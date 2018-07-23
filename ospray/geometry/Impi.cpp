@@ -31,6 +31,11 @@
 // #include "../common/Volume.h"
 #include <limits>
 
+#include <ctime>
+#include "time.h"
+#include <chrono>
+using namespace std::chrono;
+
 
 /*! _everything_ in the ospray core universe should _always_ be in the
   'ospray' namespace. */
@@ -100,7 +105,7 @@ namespace ospray {
     {
       voxel = self->voxelSource->getVoxel(voxelRef);
     }
-    
+
     /*! 'finalize' is what ospray calls when everything is set and
       done, and a actual user geometry has to be built */
     // Why this will work ???
@@ -112,24 +117,35 @@ namespace ospray {
       if (this->lastIsoValue != isoValue) {
         std::shared_ptr<testCase::TestOctant> testOct =
             std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-	testOct->build(isoValue);
+
+        high_resolution_clock::time_point t1 = high_resolution_clock::now();
+
+        testOct->build(isoValue);
         voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
+
+        high_resolution_clock::time_point t2 = high_resolution_clock::now();
+        duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
+        printf("Build Active Octants Time: %.9fs \n", time_span.count());
+
         this->lastIsoValue = isoValue;
       }
 
       // and ask ispc side to build the voxels
-      ispc::Impi_finalize(getIE(),model->getIE(),
-                          (uint64_t*)&activeVoxelRefs[0],
+      ispc::Impi_finalize(getIE(),
+                          model->getIE(),
+                          (uint64_t *)&activeVoxelRefs[0],
                           activeVoxelRefs.size(),
                           (void *)this,
-                          isoValue, (ispc::vec4f *)&isoColor);
+                          isoValue,
+                          (ispc::vec4f *)&isoColor);
     }
 
-
-    /*! create voxel source from whatever parameters we have been passed (right no, hardcoded) */
+    /*! create voxel source from whatever parameters we have been passed (right
+     * no, hardcoded) */
     void Impi::initVoxelSourceAndIsoValue()
     {
       auto amr = (ospray::AMRVolume *)getParamObject("amrDataPtr", nullptr);
+      PRINT(amr->voxelRange);
 #if 0
       isoValue = 20.f;
       voxelSource = std::make_shared<testCase::TestVoxel>();

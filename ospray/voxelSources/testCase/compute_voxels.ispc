@@ -854,7 +854,7 @@ void getAllVoxels_octant(AMRVolume *uniform self,
 				(j & 4) ? oW : 0.f);
     vec3f p = oC + vp;
     // hard code octant method here
-    oV[j] = AMR_octant(self, p);
+    oV[j] = AMR_octant(self,p);//AMR_current(self, p);//AMR_octant(self, p);
     // compute range
     oR.x = min(oR.x, oV[j]);
     oR.y = max(oR.y, oV[j]);
@@ -894,52 +894,65 @@ unmasked extern "C" externC_push_back_none(void *uniform c_vector,
 // Store active
 // ======================================================================== //
 export void getAllVoxels_active(void *uniform _self,
-				void *uniform _cptr,   // C pointer
-				void *uniform _vector, // STL vector in C++
-				const uniform float &isovalue,
-				const uniform float &fcw,
-				const uniform vec3f &lower,
-				const uniform vec3f &upper,
-				const uniform uint32 b,   // begin
-				const uniform uint32 e,   // end
-				const uniform uint32 nx,
-				const uniform uint32 ny,
-				const uniform uint32 nz,
-				// different type of cells
-				const uniform uint32 n1,
-				const uniform uint32 n2,
-				const uniform uint32 n3)
+                                void *uniform _cptr,    // C pointer
+                                void *uniform _vector,  // STL vector in C++
+                                const uniform float &isovalue,
+                                const uniform float &fcw,
+                                const uniform vec3f &lower,
+                                const uniform vec3f &upper,
+                                const uniform uint32 b,  // begin
+                                const uniform uint32 e,  // end
+                                const uniform uint32 nx,
+                                const uniform uint32 ny,
+                                const uniform uint32 nz,
+                                // different type of cells
+                                const uniform uint32 n1,
+                                const uniform uint32 n2,
+                                const uniform uint32 n3)
 {
   AMRVolume *uniform self = (AMRVolume * uniform) _self;
   // so here we need to compute the point position from index
   const uniform float hcw = 0.5f * fcw;
-  foreach (i = b ... e) {    
+  foreach (i = b... e) {
     // compute voxels
     float oW;
     vec3f oC;
     vec2f rg;
-    float oV[8];    
+    float oV[8];
     getAllVoxels_octant(self,
-			/* outputs */oW, oC, rg, oV,
-			/* index */i,
-			/* inputs */fcw, hcw, lower, upper, nx,ny, nz,
-			/* different type of cells */n1, n2, n3);
+                        /* outputs */ oW,
+                        oC,
+                        rg,
+                        oV,
+                        /* index */ i,
+                        /* inputs */ fcw,
+                        hcw,
+                        lower,
+                        upper,
+                        nx,
+                        ny,
+                        nz,
+                        /* different type of cells */ n1,
+                        n2,
+                        n3);
     bool inRange = rg.x < isovalue && rg.y > isovalue;
-    foreach_active(pid) {
+    foreach_active(pid)
+    {
       if (inRange) {
-	externC_push_back_active(_vector, _cptr, 
-				 extract(oV[0], pid), 
-				 extract(oV[1], pid), 
-				 extract(oV[2], pid), 
-				 extract(oV[3], pid), 
-				 extract(oV[4], pid), 
-				 extract(oV[5], pid), 
-				 extract(oV[6], pid), 
-				 extract(oV[7], pid), 
-				 extract(oC.x, pid),
-				 extract(oC.y, pid),
-				 extract(oC.z, pid),
-				 extract(oW, pid));
+        externC_push_back_active(_vector,
+                                 _cptr,
+                                 extract(oV[0], pid),
+                                 extract(oV[1], pid),
+                                 extract(oV[2], pid),
+                                 extract(oV[3], pid),
+                                 extract(oV[4], pid),
+                                 extract(oV[5], pid),
+                                 extract(oV[6], pid),
+                                 extract(oV[7], pid),
+                                 extract(oC.x, pid),
+                                 extract(oC.y, pid),
+                                 extract(oC.z, pid),
+                                 extract(oW, pid));
       }
     }
   }

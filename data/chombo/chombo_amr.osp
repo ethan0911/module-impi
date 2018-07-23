@@ -1,0 +1,7 @@
+<?xml?>
+<ospray>
+<AMRVolume
+	fileName="BinaryBH_test.3d.hdf5"
+	method="current"
+	/>
+</ospray>

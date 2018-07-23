@@ -58,22 +58,6 @@ static vec3f disDir{.372f,.416f,-0.605f};
 static vec2i imgSize{1024, 768};
 static vec2i numFrames{1/* skipped */, 20/* measure */};
 static affine3f Identity(vec3f(1,0,0), vec3f(0,1,0), vec3f(0,0,1), vec3f(0,0,0));
-<<<<<<< HEAD
-
-
-// static std::vector<vec3f> colors = {
-//   vec3f(0.0, 0.000, 0.563),
-//   vec3f(0.0, 0.000, 1.000),
-//   vec3f(0.0, 1.000, 1.000),
-//   vec3f(0.5, 1.000, 0.500),
-//   vec3f(1.0, 1.000, 0.000),
-//   vec3f(1.0, 0.000, 0.000),
-//   vec3f(0.5, 0.000, 0.000),
-// };
-// static std::vector<float> opacities = { 1.f, 1.f };
-
-=======
->>>>>>> 256c9960be1ec95cd7e30965f9d23b61ee960890
 static std::vector<float> colors = {
     0, 0, 0,
     0, 0.00755413, 0.0189916,
@@ -759,7 +743,7 @@ int main(int ac, const char** av)
   }
 
 #if USE_VIEWER
-  int window = ospray::viewer::Init(ac, av, imgSize.x, imgSize.y);
+  int window = viewer::Init(ac, av, imgSize.x, imgSize.y);
 #endif
 
   //-----------------------------------------------------
@@ -988,22 +972,22 @@ int main(int ac, const char** av)
 
   // setup lighting
   OSPLight d_light = ospNewLight(renderer, "DirectionalLight");
-  ospSet1f(d_light, "intensity", 0.25f);
+  ospSet1f(d_light, "intensity", 0.003f);
   ospSet1f(d_light, "angularDiameter", 0.53f);
   ospSetVec3f(d_light, "color", 
-	      osp::vec3f{127.f/255.f,178.f/255.f,255.f/255.f});
+	      osp::vec3f{131/255.f,131/255.f,131/255.f}); //127.f/255.f,178.f/255.f,255.f/255.f
   ospSetVec3f(d_light, "direction", (const osp::vec3f&)disDir);
   ospCommit(d_light);
   OSPLight s_light = ospNewLight(renderer, "DirectionalLight");
-  ospSet1f(s_light, "intensity", 1.50f);
+  ospSet1f(s_light, "intensity", 3.302f);
   ospSet1f(s_light, "angularDiameter", 0.53f);
-  ospSetVec3f(s_light, "color", osp::vec3f{1.f,1.f,1.f});  
+  ospSetVec3f(s_light, "color", osp::vec3f{166/255.f,188/255.f,214/255.f});  
   ospSetVec3f(s_light, "direction", (const osp::vec3f&)sunDir);
   ospCommit(s_light);
   OSPLight a_light = ospNewLight(renderer, "AmbientLight");
-  ospSet1f(a_light, "intensity", 0.90f);
+  ospSet1f(a_light, "intensity", 0.103f);
   ospSetVec3f(a_light, "color", 
-	      osp::vec3f{174.f/255.f,218.f/255.f,255.f/255.f});
+	      osp::vec3f{186/255.f,213/255.f,246/255.f}); //174.f/255.f,218.f/255.f,255.f/255.f
   ospCommit(a_light);
   std::vector<OSPLight> light_list { a_light, d_light, s_light };
   OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, 
@@ -1031,13 +1015,14 @@ int main(int ac, const char** av)
 
 #if USE_VIEWER
 
-  ospray::viewer::Handler(camera, 
-			  (const osp::vec3f&)vp, 
-			  (const osp::vec3f&)vu, 
-			  (const osp::vec3f&)vi);
-  ospray::viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
-  ospray::viewer::Handler(world, renderer);
-  ospray::viewer::Render(window);
+
+  viewer::Handler(camera, "perspective",
+                  (const osp::vec3f &)vp,
+                  (const osp::vec3f &)vu,
+                  (const osp::vec3f &)vi);
+  viewer::Handler(transferFcn, amrVolume->Range().x, amrVolume->Range().y);
+  viewer::Handler(world, renderer);
+  viewer::Render(window);
 
 #else
 

@@ -241,6 +241,8 @@ namespace ospray {
       }
       if (numComponents < 1)
         throw std::runtime_error("could not parse num components");
+
+      std::cout<<"Component Num:" << numComponents<< std::endl;
       for (ssize_t i = 0; i < numComponents; i++) {
         char compName[10000];
         sprintf(compName, "component_%li", i);
@@ -258,6 +260,7 @@ namespace ospray {
         H5Aclose(att);
 
         cd->component.push_back(comp);
+        std::cout<< "Component Name #" << i << cd->component[i] << std::endl;
       }
 
       unsigned long long numObjectsInFile;
