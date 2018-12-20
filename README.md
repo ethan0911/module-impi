@@ -1,8 +1,10 @@
-This is a module that allows for generating crack-free isosurface for the block-structured AMR data. For details, plase refer to 
-CPU Isosurface Ray Tracing of Adaptive Mesh Refinement Data
-[GitHub](https://ethan0911.github.io/publications/amr)
+#Introduction
+This is a module that allows for generating crack-free isosurface for the block-structured AMR data. We published a paper in IEEE VIS18
+For details, plase refer to 
+[CPU Isosurface Ray Tracing of Adaptive Mesh Refinement Data](https://ethan0911.github.io/publications/amr)
 
 # How to run the code
+
 Landing Gear Dataset
 
 ```bash
