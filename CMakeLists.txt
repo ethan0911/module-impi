@@ -22,11 +22,15 @@
 OPTION(OSPRAY_MODULE_IMPLICIT_ISOSURFACES
   "Build module the provides implicit iso-surfaces in structured grids" ON)
 OPTION(OSPRAY_MODULE_IMPI_VIEWER 
-  "Build the ImGui/OpenGL viewer implicit iso-surfaces" ON)
+  "Build the ImGui/OpenGL viewer implicit iso-surfaces" OFF)
 OPTION(OSPRAY_MODULE_IMPI_BENCH_WIDGET
   "Build a simple OpenGL viewer for implicit iso-surfaces" ON)
 OPTION(OSPRAY_MODULE_IMPI_BENCH_MARKER
   "Build the benchmarker for implicit iso-surfaces" ON)
+
+INCLUDE_DIRECTORIES_ISPC(${EMBREE_INCLUDE_DIRS}/embree3)
+INCLUDE_DIRECTORIES(${EMBREE_INCLUDE_DIRS}/embree3)
+
 
 IF (OSPRAY_MODULE_IMPLICIT_ISOSURFACES)
   ADD_SUBDIRECTORY(ospray) 

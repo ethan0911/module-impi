@@ -5,15 +5,17 @@
 #pragma once
 
 #include "ospray/ospray.h"
-#include "ospcommon/malloc.h"
+#include "ospcommon/memory/malloc.h"
 #include "ospcommon/math.h"
 #include "ospcommon/vec.h"
 #include "ospcommon/box.h"
 #include "ospcommon/range.h"
 #include "ospcommon/AffineSpace.h"
-#include "common/xml/XML.h"
+#include "ospcommon/xml/XML.h"
 #include <vector>
 #include <string>
+
+using namespace ospcommon;
 
 namespace ospray {
 

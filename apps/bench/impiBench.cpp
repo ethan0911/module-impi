@@ -902,6 +902,8 @@ int main(int ac, const char** av)
 //        //ospCommit(local);
 //        ospAddGeometry(world, v.geo);
 
+
+
       //       we build multiple iso-geometries here      
       for (auto& v : isoValues) {
 	std::cout << "v = " << v.v << " "
@@ -939,7 +941,8 @@ int main(int ac, const char** av)
   default:
     throw std::runtime_error("wrong ISO-Mode, this shouldn't happen");
   }
-  
+
+
   // debugging
   //OSPGeometry triangle = make_triangle();
   //ospAddGeometry(world, triangle);
@@ -994,6 +997,8 @@ int main(int ac, const char** av)
 			      light_list.data());
   ospCommit(lights);
 
+
+
   // setup world & renderer
   ospCommit(world); 
   ospSetVec3f(renderer, "bgColor", 
@@ -1013,7 +1018,9 @@ int main(int ac, const char** av)
   ospSet1f(renderer, "minContribution", 0.001f);
   ospCommit(renderer);
 
+
 #if USE_VIEWER
+
 
 
   viewer::Handler(camera, "perspective",

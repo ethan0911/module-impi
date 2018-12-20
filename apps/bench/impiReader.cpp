@@ -25,24 +25,24 @@ namespace ospray {
       if (doc->child.size() != 1) {
         throw std::runtime_error("not an ospray xml file (no 'ospray' child node)'");
       }
-      if ((doc->child[0]->name != "ospray" && doc->child[0]->name != "OSPRay")) {
+      if ((doc->child[0].name != "ospray" && doc->child[0].name != "OSPRay")) {
         throw std::runtime_error("not an ospray xml file (document root node is '" + 
-				 doc->child[0]->name + "', should be 'ospray'");
+				 doc->child[0].name + "', should be 'ospray'");
       }
 
-      std::shared_ptr<xml::Node> root = doc->child[0];
-      for (auto& child : root->child) {	
-	// parse AMR volume
-	if (child->name == "AMRVolume") {	  
-	  auto volume = std::make_shared<ospray::amr::AMRVolume>();
-	  std::cout << "#osp:amr: start parsing OSP file" << std::endl;
-	  volume->Load(*child);
-	  std::cout << "#osp:amr: done parsing OSP file" << std::endl;
-	  return volume;	  
-	}     
-	else {
-	  std::cout << "#osp:amr: skip node " + child->name << std::endl;
-	}   
+      auto& root = doc->child[0];
+      for (auto& child : root.child) {	
+        // parse AMR volume
+        if (child.name == "AMRVolume") {	  
+          auto volume = std::make_shared<ospray::amr::AMRVolume>();
+          std::cout << "#osp:amr: start parsing OSP file" << std::endl;
+          volume->Load(child);
+          std::cout << "#osp:amr: done parsing OSP file" << std::endl;
+          return volume;	  
+        }     
+        else {
+          std::cout << "#osp:amr: skip node " + child.name << std::endl;
+        }   
       }   
       throw std::runtime_error("AMR volume not found");
       return nullptr;      
@@ -389,8 +389,7 @@ namespace ospray {
         }
         level->data.clear();
       }
-      std::cout << "#osp:amr: found " << volume->brickInfo.size() << " bricks"
-		<< std::endl;
+      std::cout << "#osp:amr: found " << volume->brickInfo.size() << " bricks"<< std::endl;
     }
 
   }  // ::ospray::amr

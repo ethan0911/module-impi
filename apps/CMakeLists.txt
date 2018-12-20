@@ -27,22 +27,22 @@ ospray_disable_compiler_warnings()
 
 find_package(OpenGL)
 if (NOT OPENGL_FOUND) 
-  set(OSPRAY_MODULE_IMPI_VIEWER OFF)
+# set(OSPRAY_MODULE_IMPI_VIEWER OFF)
   set(OSPRAY_MODULE_IMPI_WIDGET OFF)
 endif ()
 
 ## ======================================================================== ##
 ## SG viewer
 ## ======================================================================== ##
-if (OSPRAY_MODULE_IMPI_VIEWER)
-  ospray_create_application(ospImplicitIsoSurfaceViewer
-    viewer/impiViewer.cpp
-    LINK
-    ospray
-    ospray_common
-    ospray_imgui3d_sg
-    ${OPENGL_LIBRARIES})
-endif(OSPRAY_MODULE_IMPI_VIEWER)
+#if (OSPRAY_MODULE_IMPI_VIEWER)
+#  ospray_create_application(ospImplicitIsoSurfaceViewer
+#    viewer/impiViewer.cpp
+#    LINK
+#    ospray
+#    ospray_common
+#    ospray_imgui3d_sg
+#    ${OPENGL_LIBRARIES})
+#endif(OSPRAY_MODULE_IMPI_VIEWER)
 
 ## ====================================================================== ##
 ## Benchmarker Widget
@@ -57,7 +57,6 @@ ospray_create_application(ospImplicitIsoSurfaceWidget
   LINK
   ospray
   ospray_common
-  ospray_xml
   ospray_imgui
   ospray_imgui3d_sg
   ospray_impi_app_viewer
@@ -84,7 +83,6 @@ if (OSPRAY_MODULE_IMPI_BENCH_MARKER)
     LINK
     ospray
     ospray_common
-    ospray_xml
     ${HDF5_C_LIBRARIES}
     ${HDF5_C_HL_LIBRARIES})
   set_target_properties(ospImplicitIsoSurfaceBench

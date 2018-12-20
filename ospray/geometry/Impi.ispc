@@ -22,9 +22,7 @@
 #include "common/Model.ih"
 #include "ospray/geometry/Geometry.ih"
 // embree
-#include "embree2/rtcore.isph"
-#include "embree2/rtcore_scene.isph"
-#include "embree2/rtcore_geometry_user.isph"
+#include "embree3/rtcore.isph"
 
 #include "Voxel.ih"
 
@@ -156,24 +154,33 @@ unmasked void Impi_bounds_testVoxel(Impi *uniform self,
     don't (yet) want to deal with having to have some callbacks like
     on the C side (getbounds) and others (intersectVoxel) on the ISPC
     side) */
-unmasked void Impi_bounds(Impi *uniform self,
-                          uniform size_t primID,
-                          uniform box3fa &bbox)
+unmasked void Impi_bounds(const RTCBoundsFunctionArguments *uniform args)
 {
-  externC_getVoxelBounds(bbox,self->c_self,self->activeVoxelRefs[primID]);
+  uniform Impi *uniform self = (uniform Impi *uniform)args->geometryUserPtr;
+  uniform int primID = args->primID;
+
+  box3fa *uniform out = (box3fa *uniform)args->bounds_o;
+  externC_getVoxelBounds(*out,self->c_self,self->activeVoxelRefs[primID]);
 }
 
 
+
+
 /*! intersect callback for the 'embree over hot voxels' method */
-void Impi_intersect(Impi *uniform self,
-                             varying Ray &ray,
-                             uniform size_t primID)
+unmasked void Impi_intersect(const struct RTCIntersectFunctionNArguments *uniform args)
 {
+  uniform Impi *uniform self = (uniform Impi *uniform)args->geometryUserPtr;
+  uniform int primID = args->primID;
+
   uniform Voxel  voxel;
   externC_getVoxel(voxel,self->c_self,self->activeVoxelRefs[primID]);
-  if (actualVoxelIntersect(ray,voxel,self->isoValue)) {
-    ray.geomID = self->super.geomID;
-    ray.primID = primID;
+
+    // this assumes that the args->rayhit is actually a pointer toa varying ray!
+  varying Ray *uniform ray = (varying Ray *uniform)args->rayhit;
+
+  if (actualVoxelIntersect(*ray,voxel,self->isoValue)) {
+    ray->geomID = self->super.geomID;
+    ray->primID = primID;
   }
   return;
 }
@@ -197,32 +204,30 @@ export void Impi_finalize(void   *uniform _self,
   self->activeVoxelRefs = activeVoxelRefs;
   self->c_self      = c_self;
   self->isoColor = *isoColor;
-  print("self->isoColor = [%, %, %, %]\n",
-  self->isoColor.x, self->isoColor.y, self->isoColor.z,
-  self->isoColor.w);
+  // print("active voxel number: [%]\n", activeVoxelRefs[0]);
   
   // ... and let embree build a bvh, with 'numPatches' primitmives and
   // our function pointers for ray-prim interseciton and
   // prim-boundingbox computation callsbacks
   Model *uniform model  = (Model *uniform)_model;
-  
+
   // create a new embree geometry with numpathces prims, in the model
   // that this goemetry is in.
-  uint32 uniform geomID = rtcNewUserGeometry(model->embreeSceneHandle,
-					     numActiveVoxelRefs);
+  RTCGeometry geom = rtcNewGeometry(ispc_embreeDevice(),RTC_GEOMETRY_TYPE_USER);
+  uniform uint32 geomID = rtcAttachGeometry(model->embreeSceneHandle,geom);
   self->super.geomID = geomID;
 
   // set 'us' as user data (this will be the first arg in intersect()
   // and computebounds() callbacks
-  rtcSetUserData(model->embreeSceneHandle,geomID,self);
-  
-  // set function pointers:
-  rtcSetBoundsFunction(model->embreeSceneHandle,geomID,
-                       (uniform RTCBoundsFunc)&Impi_bounds);
-  rtcSetIntersectFunction(model->embreeSceneHandle,geomID,
-                          (uniform RTCIntersectFuncVarying)&Impi_intersect);
-  rtcSetOccludedFunction(model->embreeSceneHandle,geomID,
-                         (uniform RTCOccludedFuncVarying)&Impi_intersect);
+  rtcSetGeometryUserData(geom, self);
+  rtcSetGeometryUserPrimitiveCount(geom,numActiveVoxelRefs);
+
+  rtcSetGeometryBoundsFunction(geom,(uniform RTCBoundsFunction)&Impi_bounds, self);
+  rtcSetGeometryIntersectFunction(geom,(uniform RTCIntersectFunctionN)&Impi_intersect);
+  rtcSetGeometryOccludedFunction(geom,(uniform RTCOccludedFunctionN)&Impi_intersect);
+  rtcCommitGeometry(geom);
+  rtcReleaseGeometry(geom);
+
 }
                                     
 
